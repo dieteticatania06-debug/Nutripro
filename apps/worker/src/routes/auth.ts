@@ -148,10 +148,10 @@ export async function handleAuth(request: Request, env: Env, path: string): Prom
 
     const headers = new Headers(response.headers)
     headers.append('Set-Cookie', setCookieHeader('access_token', accessToken, {
-      httpOnly: true, secure: isProduction, sameSite: 'Lax', maxAge: 900, // 15min
+      httpOnly: true, secure: isProduction, sameSite: isProduction ? 'None' : 'Lax', maxAge: 900, // 15min
     }))
     headers.append('Set-Cookie', setCookieHeader('refresh_token', refreshToken, {
-      httpOnly: true, secure: isProduction, sameSite: 'Lax', maxAge: 604800, // 7d
+      httpOnly: true, secure: isProduction, sameSite: isProduction ? 'None' : 'Lax', maxAge: 604800, // 7d
     }))
 
     return new Response(response.body, { status: 200, headers })
@@ -177,8 +177,8 @@ export async function handleAuth(request: Request, env: Env, path: string): Prom
 
     const isProduction = env.ENVIRONMENT === 'production'
     const headers = new Headers({ 'Content-Type': 'application/json' })
-    headers.append('Set-Cookie', clearCookieHeader('access_token', { secure: isProduction, sameSite: 'Lax' }))
-    headers.append('Set-Cookie', clearCookieHeader('refresh_token', { secure: isProduction, sameSite: 'Lax' }))
+    headers.append('Set-Cookie', clearCookieHeader('access_token', { secure: isProduction, sameSite: isProduction ? 'None' : 'Lax' }))
+    headers.append('Set-Cookie', clearCookieHeader('refresh_token', { secure: isProduction, sameSite: isProduction ? 'None' : 'Lax' }))
     return new Response(JSON.stringify({ success: true, message: 'Sesión cerrada' }), { status: 200, headers })
   }
 
@@ -187,8 +187,8 @@ export async function handleAuth(request: Request, env: Env, path: string): Prom
     const isProduction = env.ENVIRONMENT === 'production'
     const clearCookiesAndReturn = (errResponse: Response) => {
       const headers = new Headers(errResponse.headers)
-      headers.append('Set-Cookie', clearCookieHeader('access_token', { secure: isProduction, sameSite: 'Lax' }))
-      headers.append('Set-Cookie', clearCookieHeader('refresh_token', { secure: isProduction, sameSite: 'Lax' }))
+      headers.append('Set-Cookie', clearCookieHeader('access_token', { secure: isProduction, sameSite: isProduction ? 'None' : 'Lax' }))
+      headers.append('Set-Cookie', clearCookieHeader('refresh_token', { secure: isProduction, sameSite: isProduction ? 'None' : 'Lax' }))
       return new Response(errResponse.body, { status: errResponse.status, headers })
     }
 
@@ -221,7 +221,7 @@ export async function handleAuth(request: Request, env: Env, path: string): Prom
 
     const headers = new Headers({ 'Content-Type': 'application/json' })
     headers.append('Set-Cookie', setCookieHeader('access_token', newAccessToken, {
-      httpOnly: true, secure: isProduction, sameSite: 'Lax', maxAge: 900,
+      httpOnly: true, secure: isProduction, sameSite: isProduction ? 'None' : 'Lax', maxAge: 900,
     }))
     return new Response(JSON.stringify({ success: true, data: { accessToken: newAccessToken } }), { status: 200, headers })
   }
