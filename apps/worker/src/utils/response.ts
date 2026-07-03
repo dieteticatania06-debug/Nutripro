@@ -67,7 +67,7 @@ export function corsHeaders(origin: string): HeadersInit {
     'https://www.nutripro.es',
     'https://api.nutripro.es',
   ]
-  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0]
+  const allowedOrigin = (allowedOrigins.includes(origin) || origin.endsWith('.pages.dev')) ? origin : allowedOrigins[0]
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
