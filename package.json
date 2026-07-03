@@ -1,0 +1,28 @@
+{
+  "name": "nutripro",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "db:setup": "npm run db:migrate:local -w @nutripro/worker && npx wrangler d1 execute nutripro-db --local --file=apps/worker/seed.sql -c apps/worker/wrangler.toml",
+    "dev:all": "npm run db:setup && turbo run dev --parallel",
+    "build": "turbo run build",
+    "start:all": "npm run db:setup && turbo run build && turbo run start --parallel",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "npm@10.9.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

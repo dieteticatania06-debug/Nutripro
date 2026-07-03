@@ -1,0 +1,28 @@
+name = "nutripro-worker"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ENVIRONMENT = "development"
+APP_URL = "http://127.0.0.1:3000"
+WORKER_URL = "http://127.0.0.1:8787"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nutripro-db"
+database_id = "your-d1-database-id"
+migrations_dir = "src/db/migrations"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "nutripro-storage"
+
+[dev]
+ip = "localhost"
+port = 8787
+local_protocol = "http"
+
+# Secrets (set with: wrangler secret put SECRET_NAME)
+# JWT_SECRET
+# RESEND_API_KEY

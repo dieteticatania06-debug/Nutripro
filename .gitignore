@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+.turbo/
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Build outputs
+dist/
+build/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+.dev.vars
+
+# Cloudflare
+.wrangler/
+apps/worker/.wrangler/
+
+# Drizzle migrations (keep migrations folder but not SQLite cache)
+apps/worker/src/db/migrations/.drizzle/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Misc
+.cache/
+coverage/
