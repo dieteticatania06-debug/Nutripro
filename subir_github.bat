@@ -1,13 +1,14 @@
 @echo off
 echo ====================================================
-echo Subiendo ajuste de CORS a GitHub...
+echo Renombrando assets de fondo...
 echo ====================================================
+node rename_assets.js
 
-:: 1. Agregar y commitear los cambios
+echo ====================================================
+echo Subiendo cambios a GitHub...
+echo ====================================================
 git add .
-git commit -m "Allow pages.dev origins in CORS headers"
-
-:: 2. Subir a GitHub
+git commit -m "Rename background assets to remove spaces and fix 404"
 git push origin main
 
 echo ====================================================

@@ -17,7 +17,7 @@ export function AuthBackground() {
     <div 
       className="absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-1000 ease-in-out pointer-events-none"
       style={{ 
-        backgroundImage: `url('/auth-bg/Fondo 3.webp')`,
+        backgroundImage: `url('/auth-bg/Fondo3.webp')`,
         opacity: opacity,
       }}
     />
