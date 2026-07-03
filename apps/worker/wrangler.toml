@@ -11,7 +11,7 @@ WORKER_URL = "http://127.0.0.1:8787"
 [[d1_databases]]
 binding = "DB"
 database_name = "nutripro-db"
-database_id = "your-d1-database-id"
+database_id = "44999bb6-6b24-4899-8705-65610fc7b6ca"
 migrations_dir = "src/db/migrations"
 
 [[r2_buckets]]
