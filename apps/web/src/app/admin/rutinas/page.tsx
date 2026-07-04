@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
-import { formatDate, LEVEL_ES, getAvatarUrl } from '@/lib/utils'
+import { formatDate, LEVEL_ES, getAvatarUrl, cn } from '@/lib/utils'
 import Image from 'next/image'
 import { Plus, X, PlusCircle, Trash2, Search, ChevronDown, ChevronUp, Dumbbell, Pencil, Sparkles, Crown, Shield, Activity } from 'lucide-react'
 
@@ -200,7 +200,7 @@ export default function AdminRutinasPage() {
   const handleEditWorkout = async (w: Workout) => {
     setEditingWorkoutId(w.id)
     setValue('userId', w.userId)
-    setValue('title', w.title)
+    setValue('title', w.title.replace(/^Borrador:\s*/i, ''))
     setValue('level', w.level ?? undefined)
     setValue('daysPerWeek', w.daysPerWeek ?? undefined)
     setValue('duration', w.duration ?? undefined)
@@ -409,6 +409,11 @@ export default function AdminRutinasPage() {
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Activa
                       </Badge>
+                    ) : clientWorkouts.some((w) => w.status === 'draft') ? (
+                      <Badge variant="warning" className="text-[10px] gap-1 py-0.5 px-2 rounded-full font-medium bg-amber-500/10 text-amber-600 border-amber-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        Borrador listo
+                      </Badge>
                     ) : (
                       <Badge variant="secondary" className="text-[10px] py-0.5 px-2 rounded-full font-medium">Sin pauta</Badge>
                     )}
@@ -447,8 +452,14 @@ export default function AdminRutinasPage() {
                           <div className="space-y-1 flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-sm font-medium text-foreground">{w.title}</p>
-                              <Badge variant={w.status === 'active' ? 'success' : 'secondary'} className="text-[10px] py-0 px-1.5">
-                                {w.status === 'active' ? 'Activa' : 'Archivada'}
+                              <Badge
+                                variant={w.status === 'draft' ? 'warning' : (w.status === 'active' ? 'success' : 'secondary')}
+                                className={cn(
+                                  "text-[10px] py-0 px-1.5",
+                                  w.status === 'draft' && "bg-amber-500/10 text-amber-600 border-amber-200"
+                                )}
+                              >
+                                {w.status === 'draft' ? 'Borrador' : (w.status === 'active' ? 'Activa' : 'Archivada')}
                               </Badge>
                               {w.level && <Badge variant="outline" className="text-[10px]">{LEVEL_ES[w.level]}</Badge>}
                             </div>
@@ -457,7 +468,38 @@ export default function AdminRutinasPage() {
                               {w.daysPerWeek && ` · ${w.daysPerWeek} días/sem`}
                             </p>
                           </div>
-                          <div className="flex gap-1 shrink-0">
+                          <div className="flex gap-1.5 shrink-0 items-center">
+                            {w.status === 'draft' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-xs gap-1 border-amber-200 text-amber-700 hover:bg-amber-50 bg-amber-500/[0.02]"
+                                onClick={async () => {
+                                  try {
+                                    const cleanTitle = w.title.replace(/^Borrador:\s*/i, '')
+                                    // Fetch full workout details to keep exercises when updating status
+                                    const full = await workoutsApi.get(w.id)
+                                    await workoutsApi.update(w.id, {
+                                      userId: w.userId,
+                                      title: cleanTitle,
+                                      level: w.level || undefined,
+                                      daysPerWeek: w.daysPerWeek || undefined,
+                                      duration: w.duration || undefined,
+                                      description: w.description || undefined,
+                                      status: 'active',
+                                      exercises: full.exercises || []
+                                    })
+                                    toast({ title: 'Rutina confirmada y enviada al cliente' })
+                                    await load()
+                                  } catch (err) {
+                                    toast({ title: 'Error al confirmar la rutina', variant: 'destructive' })
+                                  }
+                                }}
+                              >
+                                <Activity className="h-3.5 w-3.5" />
+                                Confirmar y Enviar
+                              </Button>
+                            )}
                             <Button
                               size="icon"
                               variant="ghost"

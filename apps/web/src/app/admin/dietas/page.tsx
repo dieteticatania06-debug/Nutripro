@@ -160,7 +160,10 @@ interface DietEditorProps {
 }
 
 function DietEditor({ clientId, existingDiet, onSaved, onCancel }: DietEditorProps) {
-  const [title, setTitle]             = useState(existingDiet?.title ?? '')
+  const [title, setTitle]             = useState(() => {
+    const raw = existingDiet?.title ?? ''
+    return raw.replace(/^Borrador:\s*/i, '')
+  })
   const [description, setDescription] = useState(existingDiet?.description ?? '')
   const [totalCalories, setTotalCalories] = useState<string>(
     existingDiet?.totalCalories != null ? String(existingDiet.totalCalories) : ''
@@ -635,6 +638,7 @@ function AdminDietasContent() {
           {filteredClients.map((client) => {
             const clientDiets  = diets.filter((d) => d.userId === client.id)
             const activeDiet   = clientDiets.find((d) => d.status === 'active')
+            const draftDiet    = clientDiets.find((d) => d.status === 'draft')
             const archivedDiets = clientDiets.filter((d) => d.status === 'archived')
             const isExpanded   = expandedClientId === client.id
             const isEditing    = editorClientId === client.id
@@ -680,6 +684,11 @@ function AdminDietasContent() {
                       <Badge variant="success" className="text-[10px] gap-1 py-0.5 px-2 rounded-full font-medium">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Activa
+                      </Badge>
+                    ) : draftDiet ? (
+                      <Badge variant="warning" className="text-[10px] gap-1 py-0.5 px-2 rounded-full font-medium bg-amber-500/10 text-amber-600 border-amber-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        Borrador listo
                       </Badge>
                     ) : (
                       <Badge variant="secondary" className="text-[10px] py-0.5 px-2 rounded-full font-medium">Sin pauta</Badge>
@@ -731,6 +740,62 @@ function AdminDietasContent() {
                           onSaved={handleSaved}
                           onCancel={closeEditor}
                         />
+                      </div>
+                    )}
+
+                    {/* Draft Diet View (Intermediate review step) */}
+                    {draftDiet && !isEditing && (
+                      <div className="space-y-4 p-5 rounded-2xl border border-amber-200/80 bg-amber-500/[0.015] backdrop-blur-sm shadow-sm mb-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-200/50 pb-4">
+                          <div className="space-y-1">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-700 border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              Borrador pendiente de revisión
+                            </div>
+                            <h3 className="text-sm font-bold text-foreground mt-1">
+                              {draftDiet.title}
+                            </h3>
+                            {draftDiet.description && (
+                              <p className="text-xs text-muted-foreground">{draftDiet.description}</p>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs gap-1 border-amber-200 text-amber-700 hover:bg-amber-50"
+                              onClick={() => openEditDiet(draftDiet)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Revisar/Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="h-8 text-xs gap-1 bg-amber-600 hover:bg-amber-700 text-white shadow-sm font-bold"
+                              onClick={async () => {
+                                try {
+                                  const cleanTitle = draftDiet.title.replace(/^Borrador:\s*/i, '')
+                                  await dietsApi.update(draftDiet.id, {
+                                    status: 'active',
+                                    userId: client.id,
+                                    title: cleanTitle
+                                  })
+                                  toast({ title: 'Dieta confirmada y enviada al cliente' })
+                                  await load()
+                                } catch (err) {
+                                  toast({ title: 'Error al confirmar la dieta', variant: 'destructive' })
+                                }
+                              }}
+                            >
+                              <Activity className="h-3.5 w-3.5" />
+                              Confirmar y Enviar
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="pt-2 rounded-xl overflow-hidden border border-amber-100 bg-white/70">
+                          <DietTableReadOnly diet={draftDiet} />
+                        </div>
                       </div>
                     )}
 

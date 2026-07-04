@@ -136,23 +136,25 @@ export async function handleWorkouts(request: Request, env: Env, path: string): 
         allWorkoutTitles,
       })
 
-      // Archive previous active workouts for this user
+      // Delete any previous unconfirmed draft workouts for this user (exercises will cascade delete)
       await db
-        .update(schema.workouts)
-        .set({ status: 'archived', updatedAt: new Date().toISOString() })
-        .where(and(eq(schema.workouts.userId, userId), eq(schema.workouts.status, 'active')))
+        .delete(schema.workouts)
+        .where(and(eq(schema.workouts.userId, userId), eq(schema.workouts.status, 'draft')))
 
       const workoutId = generateId()
       const now = new Date().toISOString()
+      const rawTitle = generated.title || 'Rutina Personalizada con IA'
+      const title = rawTitle.startsWith('Borrador:') ? rawTitle : `Borrador: ${rawTitle}`
+
       await db.insert(schema.workouts).values({
         id: workoutId,
         userId,
-        title: generated.title || 'Rutina Personalizada con IA',
+        title,
         description: generated.description || null,
         daysPerWeek: generated.daysPerWeek || null,
         duration: generated.duration || null,
         level: generated.level || null,
-        status: 'active',
+        status: 'draft',
         assignedAt: now,
         createdAt: now,
         updatedAt: now,
@@ -199,6 +201,11 @@ export async function handleWorkouts(request: Request, env: Env, path: string): 
     if (!existing) return notFound()
 
     const now = new Date().toISOString()
+    if (workoutData.status === 'active') {
+      await db.update(schema.workouts)
+        .set({ status: 'archived', updatedAt: now })
+        .where(and(eq(schema.workouts.userId, existing.userId), eq(schema.workouts.status, 'active')))
+    }
     await db.update(schema.workouts).set({ ...workoutData, updatedAt: now }).where(eq(schema.workouts.id, id))
     
     // Replace exercises

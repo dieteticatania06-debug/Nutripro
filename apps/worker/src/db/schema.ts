@@ -157,7 +157,7 @@ export const diets = sqliteTable(
     description: text('description'),
     content: text('content').notNull(), // Rich text / markdown
     totalCalories: integer('total_calories'),
-    status: text('status', { enum: ['active', 'archived'] })
+    status: text('status', { enum: ['active', 'archived', 'draft'] })
       .notNull()
       .default('active'),
     assignedAt: text('assigned_at')
@@ -186,7 +186,7 @@ export const workouts = sqliteTable(
     daysPerWeek: integer('days_per_week'),
     duration: integer('duration'), // minutes
     level: text('level', { enum: ['beginner', 'intermediate', 'advanced'] }),
-    status: text('status', { enum: ['active', 'archived'] })
+    status: text('status', { enum: ['active', 'archived', 'draft'] })
       .notNull()
       .default('active'),
     assignedAt: text('assigned_at')

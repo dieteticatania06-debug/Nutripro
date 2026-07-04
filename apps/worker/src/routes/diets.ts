@@ -152,22 +152,24 @@ export async function handleDiets(request: Request, env: Env, path: string): Pro
         notes: generated.notes ?? '',
       })
 
-      // Archive previous active diets for this user
+      // Delete any previous unconfirmed draft diets for this user
       await db
-        .update(schema.diets)
-        .set({ status: 'archived', updatedAt: new Date().toISOString() })
-        .where(and(eq(schema.diets.userId, userId), eq(schema.diets.status, 'active')))
+        .delete(schema.diets)
+        .where(and(eq(schema.diets.userId, userId), eq(schema.diets.status, 'draft')))
 
       const id = generateId()
       const now = new Date().toISOString()
+      const rawTitle = generated.title || 'Dieta Personalizada con IA'
+      const title = rawTitle.startsWith('Borrador:') ? rawTitle : `Borrador: ${rawTitle}`
+
       await db.insert(schema.diets).values({
         id,
         userId,
-        title: generated.title || 'Dieta Personalizada con IA',
+        title,
         description: generated.description || null,
         content,
         totalCalories: generated.totalCalories || null,
-        status: 'active',
+        status: 'draft',
         assignedAt: now,
         createdAt: now,
         updatedAt: now,
@@ -205,18 +207,22 @@ export async function handleDiets(request: Request, env: Env, path: string): Pro
     const authResult = await requireAdmin(request, env)
     if (authResult instanceof Response) return authResult
 
-    const id = path.slice(1)
-    const body = await request.json().catch(() => ({}))
-    const parsed = dietSchema.partial().safeParse(body)
-    if (!parsed.success) return error(parsed.error.errors[0]?.message ?? 'Datos inválidos', 422)
+    const now = new Date().toISOString()
+    const existing = await db.select().from(schema.diets).where(eq(schema.diets.id, id)).get()
+    if (!existing) return notFound('Dieta no encontrada')
+
+    if (parsed.data.status === 'active') {
+      await db.update(schema.diets)
+        .set({ status: 'archived', updatedAt: now })
+        .where(and(eq(schema.diets.userId, existing.userId), eq(schema.diets.status, 'active')))
+    }
 
     await db
       .update(schema.diets)
-      .set({ ...parsed.data, updatedAt: new Date().toISOString() })
+      .set({ ...parsed.data, updatedAt: now })
       .where(eq(schema.diets.id, id))
 
     const diet = await db.select().from(schema.diets).where(eq(schema.diets.id, id)).get()
-    if (!diet) return notFound('Dieta no encontrada')
     return ok(diet)
   }
 
