@@ -380,7 +380,34 @@ export function LandingView() {
     const items = document.querySelectorAll('.reveal-item')
     items.forEach((item) => observer.observe(item))
 
+    // Fallback: reveal items that are already in or above the viewport
+    const revealVisibleItems = () => {
+      const triggerBottom = window.innerHeight * 0.95
+      items.forEach((item) => {
+        if (!item.classList.contains('revealed')) {
+          const rect = item.getBoundingClientRect()
+          // If the element's top is above the trigger bottom line, it is visible or scrolled past
+          if (rect.top < triggerBottom) {
+            item.classList.add('revealed')
+            observer.unobserve(item)
+          }
+        }
+      })
+    }
+
+    // Run check immediately and with small delays to handle layout settle and scroll restoration
+    revealVisibleItems()
+    const timer1 = setTimeout(revealVisibleItems, 100)
+    const timer2 = setTimeout(revealVisibleItems, 300)
+
+    window.addEventListener('scroll', revealVisibleItems, { passive: true })
+    window.addEventListener('resize', revealVisibleItems, { passive: true })
+
     return () => {
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+      window.removeEventListener('scroll', revealVisibleItems)
+      window.removeEventListener('resize', revealVisibleItems)
       items.forEach((item) => observer.unobserve(item))
     }
   }, [loadingReviews, reviews])

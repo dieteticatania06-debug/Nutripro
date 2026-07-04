@@ -17,11 +17,13 @@ import { useRef } from 'react'
 import Image from 'next/image'
 import { getInitials, getAvatarUrl } from '@/lib/utils'
 import { useAuthStore } from '@/features/auth/store/authStore'
-import { Upload, Trash2 } from 'lucide-react'
+import { Upload, Trash2, ArrowLeft } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 import { Loader } from '@/components/ui/loader'
 
 export default function PerfilPage() {
+  const router = useRouter()
   const { user } = useAuthStore()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -116,9 +118,27 @@ export default function PerfilPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Mi Perfil</h1>
-        <p className="text-muted-foreground">Gestiona tu información personal</p>
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            if (window.history.length > 1) {
+              router.back()
+            } else {
+              const backPath = user?.role === 'admin' ? '/admin' : '/dashboard'
+              router.push(backPath)
+            }
+          }}
+          className="rounded-full hover:bg-black/5 shrink-0"
+          title="Volver"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Mi Perfil</h1>
+          <p className="text-muted-foreground">Gestiona tu información personal</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
