@@ -322,14 +322,18 @@ export const chatApi = {
   getAllChats: () =>
     apiFetch<(Chat & { firstName: string; lastName: string; email: string })[]>('/chat/'),
 
-  getMessages: (chatId: string) =>
-    apiFetch<Message[]>(`/chat/${chatId}/messages`),
+  getMessages: (chatId: string) => {
+    if (!chatId || chatId === 'undefined') return Promise.resolve([])
+    return apiFetch<Message[]>(`/chat/${chatId}/messages`)
+  },
 
-  sendMessage: (chatId: string, content: string) =>
-    apiFetch<Message>(`/chat/${chatId}/messages`, {
+  sendMessage: (chatId: string, content: string) => {
+    if (!chatId || chatId === 'undefined') return Promise.reject(new Error('Chat ID no válido'))
+    return apiFetch<Message>(`/chat/${chatId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ content }),
-    }),
+    })
+  },
 
   getChatByUser: (userId: string) =>
     apiFetch<Chat>(`/chat/by-user/${userId}`),

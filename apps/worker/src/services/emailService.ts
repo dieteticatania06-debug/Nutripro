@@ -10,7 +10,7 @@ export interface EmailOptions {
 export class EmailService {
   private apiKey: string
   private appUrl: string
-  private sender = { name: 'NutriPro', email: 'migueligleval@gmail.com' }
+  private sender = { name: 'NutriPro', email: 'dieteticatania06@gmail.com' }
 
   constructor(apiKey: string) {
     this.apiKey = apiKey

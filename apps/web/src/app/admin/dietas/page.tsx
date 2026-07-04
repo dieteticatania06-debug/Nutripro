@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
-import { formatDate, parseDietContent, getAvatarUrl } from '@/lib/utils'
+import { formatDate, parseDietContent, getAvatarUrl, getDietAverageCalories } from '@/lib/utils'
 import type { DietContent, DietContentV2, WeeklyPlan, WeeklyPlanV2, MealDetail } from '@/lib/utils'
 import Image from 'next/image'
 import { DietTableReadOnly } from '@/components/diets/DietTableReadOnly'
@@ -228,15 +228,22 @@ function DietEditor({ clientId, existingDiet, onSaved, onCancel }: DietEditorPro
 
         // Recalculate daily average to update totalCalories
         let totalCal = 0
+        let count = 0
         DAYS.forEach((d) => {
           let dayCal = 0
           MEALS.forEach((m) => {
             const mCal = next[`${d.key}-${m.key}`]?.calories ?? 0
-            dayCal += mCal
+            const mCalNum = typeof mCal === 'number' ? mCal : Number(mCal)
+            if (!isNaN(mCalNum)) {
+              dayCal += mCalNum
+            }
           })
-          totalCal += dayCal
+          if (dayCal > 0) {
+            totalCal += dayCal
+            count++
+          }
         })
-        const avgCal = Math.round(totalCal / 7)
+        const avgCal = count > 0 ? Math.round(totalCal / count) : 0
         if (avgCal > 0) {
           setTotalCalories(String(avgCal))
         }
@@ -264,12 +271,32 @@ function DietEditor({ clientId, existingDiet, onSaved, onCancel }: DietEditorPro
     setIsSaving(true)
     try {
       const content = serializeDietContentV2(weeklyPlan, notes, cellMacros)
+
+      // Automatically calculate average calories from cellMacros
+      let totalCal = 0
+      let count = 0
+      DAYS.forEach((d) => {
+        let dayCal = 0
+        MEALS.forEach((m) => {
+          const mCal = cellMacros[`${d.key}-${m.key}`]?.calories ?? 0
+          const mCalNum = typeof mCal === 'number' ? mCal : Number(mCal)
+          if (!isNaN(mCalNum)) {
+            dayCal += mCalNum
+          }
+        })
+        if (dayCal > 0) {
+          totalCal += dayCal
+          count++
+        }
+      })
+      const computedAvgCalories = count > 0 ? Math.round(totalCal / count) : 0
+
       const payload = {
         userId: clientId,
         title: title.trim(),
         description: description.trim() || null,
         content,
-        totalCalories: totalCalories ? Number(totalCalories) : null,
+        totalCalories: computedAvgCalories > 0 ? computedAvgCalories : (totalCalories ? Number(totalCalories) : null),
         status: 'active' as const,
       }
       if (existingDiet) {
@@ -721,12 +748,18 @@ function AdminDietasContent() {
                                 <Calendar className="h-3 w-3" />
                                 {formatDate(activeDiet.assignedAt)}
                               </span>
-                              {activeDiet.totalCalories && (
-                                <span className="flex items-center gap-1">
-                                  <Flame className="h-3 w-3 text-orange-500" />
-                                  {activeDiet.totalCalories} kcal
-                                </span>
-                              )}
+                              {(() => {
+                                const avgCal = getDietAverageCalories(activeDiet.content, activeDiet.totalCalories)
+                                if (avgCal > 0) {
+                                  return (
+                                    <span className="flex items-center gap-1">
+                                      <Flame className="h-3 w-3 text-orange-500" />
+                                      {avgCal} kcal
+                                    </span>
+                                  )
+                                }
+                                return null
+                              })()}
                             </div>
                             {activeDiet.description && (
                               <p className="text-xs text-muted-foreground">{activeDiet.description}</p>

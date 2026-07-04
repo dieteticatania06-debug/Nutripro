@@ -110,8 +110,9 @@ export default function DietasPage() {
       doc.text(dateText, pageWidth - margin - dateWidth, 12)
 
       // Calories target alignment (below date)
-      if (diet.totalCalories) {
-        const calText = `Calorías diarias: ${diet.totalCalories} kcal`
+      const avgCal = getDietAverageCalories(diet.content, diet.totalCalories)
+      if (avgCal > 0) {
+        const calText = `Calorías diarias (Media): ${avgCal} kcal`
         doc.setFont('helvetica', 'bold')
         doc.setFontSize(9.5)
         doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2])

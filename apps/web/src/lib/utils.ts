@@ -154,8 +154,9 @@ export function getDietAverageCalories(dietContentRaw: string, fallbackCalories?
     const dayKeys: DayKey[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
     dayKeys.forEach((key) => {
       const kcal = parsed.weeklyPlan[key]?.dayTotals?.calories
-      if (typeof kcal === 'number' && kcal > 0) {
-        totalKcal += kcal
+      const kcalNum = typeof kcal === 'number' ? kcal : Number(kcal)
+      if (!isNaN(kcalNum) && kcalNum > 0) {
+        totalKcal += kcalNum
         count++
       }
     })
