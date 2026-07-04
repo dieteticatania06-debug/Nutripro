@@ -777,14 +777,21 @@ function AdminDietasContent() {
                                 try {
                                   const cleanTitle = draftDiet.title.replace(/^Borrador:\s*/i, '')
                                   await dietsApi.update(draftDiet.id, {
-                                    status: 'active',
-                                    userId: client.id,
-                                    title: cleanTitle
+                                    userId: draftDiet.userId,
+                                    title: cleanTitle,
+                                    description: draftDiet.description,
+                                    content: draftDiet.content,
+                                    totalCalories: draftDiet.totalCalories,
+                                    status: 'active'
                                   })
                                   toast({ title: 'Dieta confirmada y enviada al cliente' })
                                   await load()
                                 } catch (err) {
-                                  toast({ title: 'Error al confirmar la dieta', variant: 'destructive' })
+                                  toast({ 
+                                    title: 'Error al confirmar la dieta', 
+                                    description: err instanceof ApiError ? err.message : 'Error desconocido',
+                                    variant: 'destructive' 
+                                  })
                                 }
                               }}
                             >

@@ -492,7 +492,11 @@ export default function AdminRutinasPage() {
                                     toast({ title: 'Rutina confirmada y enviada al cliente' })
                                     await load()
                                   } catch (err) {
-                                    toast({ title: 'Error al confirmar la rutina', variant: 'destructive' })
+                                    toast({ 
+                                      title: 'Error al confirmar la rutina', 
+                                      description: err instanceof ApiError ? err.message : 'Error desconocido',
+                                      variant: 'destructive' 
+                                    })
                                   }
                                 }}
                               >

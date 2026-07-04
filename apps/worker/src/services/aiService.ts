@@ -120,6 +120,11 @@ IMPORTANTE - VARIEDAD Y EVITAR REPETICIONES:
 - Para los desayunos y meriendas (mid_morning / snack), planifica al menos 2 o 3 opciones distintas y altérnalas durante la semana.
 - Incluso en dietas restrictivas, haz un esfuerzo por aportar variedad utilizando diferentes fuentes de proteína y distintas guarniciones.
 
+IMPORTANTE - FORMATO DE TEXTO DE COMIDAS:
+- En el campo "text" de cada comida, escribe ÚNICAMENTE el nombre de los alimentos, cantidades y preparación.
+- Está ESTRICTAMENTE PROHIBIDO incluir los macronutrientes o las calorías en el campo "text" (ej: NO pongas cosas como "(400 kcal, 30g proteína, ...)" al final del texto). Las calorías y macros deben ir únicamente en el objeto "macros" de la comida.
+
+
 Debes responder ÚNICAMENTE con un objeto JSON válido. El JSON debe cumplir exactamente con esta estructura:
 {
   "title": "Título descriptivo y profesional de la dieta (ej: Dieta Hipocalórica Fase 1, Pauta de Aumento de Masa Muscular)",

@@ -167,4 +167,9 @@ export function getDietAverageCalories(dietContentRaw: string, fallbackCalories?
   return fallbackCalories || 0
 }
 
+export function cleanMealText(text: string): string {
+  if (!text) return ''
+  return text.replace(/\s*\([^)]*(?:kcal|calorías|prote[íi]na|grasa|carbohidrato)[^)]*\)/gi, '').trim()
+}
+
 

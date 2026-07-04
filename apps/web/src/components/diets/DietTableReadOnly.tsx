@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import type { Diet } from '@nutripro/shared'
 import { ChevronDown, ChevronUp } from 'lucide-react'
-import { parseDietContent, type DietContent, type DietContentV2, type DayKey, type MealKey } from '@/lib/utils'
+import { parseDietContent, cleanMealText, type DietContent, type DietContentV2, type DayKey, type MealKey } from '@/lib/utils'
 
 export const DAYS = [
   { key: 'monday',    label: 'Lunes' },
@@ -112,7 +112,7 @@ function DietTable({ content }: { content: DietContent | DietContentV2 }) {
                       >
                         {text ? (
                           <>
-                            <span className="whitespace-pre-line">{text}</span>
+                            <span className="whitespace-pre-line">{cleanMealText(text)}</span>
                             {macros && (macros.calories > 0 || macros.protein > 0) && (
                               <div className={`hidden group-hover:block absolute z-50 bg-[#FAF3EC]/95 backdrop-blur-md text-foreground rounded-2xl p-3.5 shadow-2xl text-xs space-y-2 w-44 -top-2 border border-orange-200/50 animate-in fade-in duration-100 pointer-events-none ${
                                 index >= 3 ? 'right-[102%] left-auto' : 'left-[85%] right-auto'
@@ -278,7 +278,7 @@ function DietAccordion({ content }: { content: DietContent | DietContentV2 }) {
                         </div>
                         {text ? (
                           <p className="text-sm text-[#2D1E1B]/90 leading-relaxed whitespace-pre-line font-medium pl-1">
-                            {text}
+                            {cleanMealText(text)}
                           </p>
                         ) : (
                           <p className="text-sm text-muted-foreground/40 italic pl-1">No especificado</p>

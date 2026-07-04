@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
-import { formatDate, parseDietContent, getDietAverageCalories } from '@/lib/utils'
+import { formatDate, parseDietContent, getDietAverageCalories, cleanMealText } from '@/lib/utils'
 import { Utensils, Download, Calendar, Flame, Activity, ShoppingCart, CheckSquare, Square, Copy, Check, Eye } from 'lucide-react'
 import { Loader } from '@/components/ui/loader'
 import {
@@ -134,9 +134,9 @@ export default function DietasPage() {
           '', // Drawn manually in didDrawCell to control formatting, borders, and rounded macro cards
           ...MEALS.map((m) => {
             if (parsed.version === 2) {
-              return parsed.weeklyPlan[d.key]?.meals?.[m.key]?.text || '—'
+              return cleanMealText(parsed.weeklyPlan[d.key]?.meals?.[m.key]?.text || '—')
             }
-            return (parsed.weeklyPlan[d.key] as any)?.[m.key] || '—'
+            return cleanMealText((parsed.weeklyPlan[d.key] as any)?.[m.key] || '—')
           }),
         ])
 
