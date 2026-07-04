@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -179,7 +179,11 @@ const originalServices = [
 export function LandingView() {
   const { isAuthenticated, user } = useAuthStore()
   const [mounted, setMounted] = useState(false)
-  const [scrollY, setScrollY] = useState(0)
+  
+  const blob1Ref = useRef<HTMLDivElement>(null)
+  const blob2Ref = useRef<HTMLDivElement>(null)
+  const blob3Ref = useRef<HTMLDivElement>(null)
+  const blob4Ref = useRef<HTMLDivElement>(null)
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false)
   const [isEmailCopied, setIsEmailCopied] = useState(false)
 
@@ -351,7 +355,29 @@ export function LandingView() {
     const handleScroll = () => {
       cancelAnimationFrame(rAFId)
       rAFId = requestAnimationFrame(() => {
-        setScrollY(window.scrollY)
+        const sy = window.scrollY
+        const isMobile = window.innerWidth < 768
+
+        if (isMobile) {
+          if (blob1Ref.current) blob1Ref.current.style.transform = 'none'
+          if (blob2Ref.current) blob2Ref.current.style.transform = 'none'
+          if (blob3Ref.current) blob3Ref.current.style.transform = 'none'
+          if (blob4Ref.current) blob4Ref.current.style.transform = 'none'
+          return
+        }
+
+        if (blob1Ref.current) {
+          blob1Ref.current.style.transform = `translateY(${sy * 0.12}px) translateX(${sy * -0.04}px)`
+        }
+        if (blob2Ref.current) {
+          blob2Ref.current.style.transform = `translateY(${sy * -0.08}px) translateX(${sy * 0.04}px) scale(${1 + sy * 0.00005})`
+        }
+        if (blob3Ref.current) {
+          blob3Ref.current.style.transform = `translateY(${sy * 0.08}px)`
+        }
+        if (blob4Ref.current) {
+          blob4Ref.current.style.transform = `translateY(${sy * -0.05}px) translateX(${sy * -0.03}px) scale(${Math.max(0.8, 1 - sy * 0.00005)})`
+        }
       })
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -478,28 +504,20 @@ export function LandingView() {
 
       {/* Floating Parallax Background Blobs */}
       <div
+        ref={blob1Ref}
         className="fixed top-[-10%] right-[-10%] w-[650px] h-[650px] rounded-full bg-[#3A875A]/20 blur-[130px] pointer-events-none will-change-transform z-0"
-        style={{
-          transform: `translateY(${scrollY * 0.12}px) translateX(${scrollY * -0.04}px)`
-        }}
       />
       <div
+        ref={blob2Ref}
         className="fixed top-[30%] left-[-15%] w-[600px] h-[600px] rounded-full bg-orange-300/25 blur-[125px] pointer-events-none will-change-transform z-0"
-        style={{
-          transform: `translateY(${scrollY * -0.08}px) translateX(${scrollY * 0.04}px) scale(${1 + scrollY * 0.00005})`
-        }}
       />
       <div
+        ref={blob3Ref}
         className="fixed top-[60%] right-[-15%] w-[500px] h-[500px] rounded-full bg-[#3A875A]/15 blur-[110px] pointer-events-none will-change-transform z-0"
-        style={{
-          transform: `translateY(${scrollY * 0.08}px)`
-        }}
       />
       <div
+        ref={blob4Ref}
         className="fixed bottom-[-5%] left-[-10%] w-[600px] h-[600px] rounded-full bg-orange-200/25 blur-[130px] pointer-events-none will-change-transform z-0"
-        style={{
-          transform: `translateY(${scrollY * -0.05}px) translateX(${scrollY * -0.03}px) scale(${Math.max(0.8, 1 - scrollY * 0.00005)})`
-        }}
       />
 
       {/* Hero */}
