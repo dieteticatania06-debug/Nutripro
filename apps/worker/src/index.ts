@@ -101,7 +101,7 @@ export default {
     // Rate limiting (bypassed in development)
     const isDev = env.ENVIRONMENT === 'development'
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
-    const authLimit = url.pathname.startsWith('/auth/login') || url.pathname.startsWith('/auth/register') ? 10 : 100
+    const authLimit = url.pathname.startsWith('/auth/login') || url.pathname.startsWith('/auth/register') ? 50 : 200
     if (!isDev && !checkRateLimit(ip, authLimit)) {
       const response = new Response(
         JSON.stringify({ success: false, error: 'Demasiadas peticiones. Inténtalo en un minuto.' }),
