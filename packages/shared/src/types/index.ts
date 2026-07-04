@@ -66,7 +66,7 @@ export interface Questionnaire {
 
 // ─── Diet ────────────────────────────────────────────────────
 
-export type DietStatus = 'active' | 'archived'
+export type DietStatus = 'active' | 'archived' | 'draft'
 
 export interface Diet {
   id: string
@@ -85,7 +85,7 @@ export interface Diet {
 
 // ─── Workout ──────────────────────────────────────────────────
 
-export type WorkoutStatus = 'active' | 'archived'
+export type WorkoutStatus = 'active' | 'archived' | 'draft'
 
 export interface WorkoutExercise {
   id: string

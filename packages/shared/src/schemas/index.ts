@@ -95,7 +95,7 @@ export const dietSchema = z.object({
   description: z.string().max(500).nullable().optional(),
   content: z.string().min(10),
   totalCalories: z.number().min(0).max(10000).nullable().optional(),
-  status: z.enum(['active', 'archived']).default('active'),
+  status: z.enum(['active', 'archived', 'draft']).default('active'),
 })
 
 
@@ -119,7 +119,7 @@ export const workoutSchema = z.object({
   daysPerWeek: z.number().min(1).max(7).nullable().optional(),
   duration: z.number().min(1).nullable().optional(),
   level: z.enum(['beginner', 'intermediate', 'advanced']).nullable().optional(),
-  status: z.enum(['active', 'archived']).default('active'),
+  status: z.enum(['active', 'archived', 'draft']).default('active'),
   exercises: z.array(workoutExerciseSchema).default([]),
 })
 
