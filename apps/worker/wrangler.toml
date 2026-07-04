@@ -5,7 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 ENVIRONMENT = "production"
-APP_URL = "https://nutripro-1uf.pages.dev"
+APP_URL = "https://nutripro-app.pages.dev"
 WORKER_URL = "https://nutripro-worker.nutriproo.workers.dev"
 
 [[d1_databases]]
