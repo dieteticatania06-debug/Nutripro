@@ -18,7 +18,7 @@ npx wrangler r2 bucket create nutripro-storage 2>nul
 :: 3. Aplicar tablas de base de datos en Cloudflare (Migraciones)
 echo.
 echo [3/5] Aplicando migraciones de base de datos en la nube...
-npx wrangler d1 migrations apply nutripro-db --remote -c apps/worker/wrangler.toml
+npx wrangler d1 migrations apply nutripro-db --remote --batch -c apps/worker/wrangler.toml
 
 :: 4. Insertar el Administrador Inicial en la base de datos (Seed)
 echo.
