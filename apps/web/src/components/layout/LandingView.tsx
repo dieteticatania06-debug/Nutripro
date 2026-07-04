@@ -426,14 +426,9 @@ export function LandingView() {
     const timer1 = setTimeout(revealVisibleItems, 100)
     const timer2 = setTimeout(revealVisibleItems, 300)
 
-    window.addEventListener('scroll', revealVisibleItems, { passive: true })
-    window.addEventListener('resize', revealVisibleItems, { passive: true })
-
     return () => {
       clearTimeout(timer1)
       clearTimeout(timer2)
-      window.removeEventListener('scroll', revealVisibleItems)
-      window.removeEventListener('resize', revealVisibleItems)
       items.forEach((item) => observer.unobserve(item))
     }
   }, [loadingReviews, reviews])
