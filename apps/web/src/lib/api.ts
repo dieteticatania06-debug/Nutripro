@@ -53,13 +53,11 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
     }
   }
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...fetchOptions.headers,
-  }
+  const headers = new Headers(fetchOptions.headers)
+  headers.set('Content-Type', 'application/json')
 
   if (accessToken) {
-    headers['Authorization'] = `Bearer ${accessToken}`
+    headers.set('Authorization', `Bearer ${accessToken}`)
   }
 
   const response = await fetch(url, {
@@ -91,11 +89,9 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
           }
 
           // Retry the original request
-          const retryHeaders: Record<string, string> = {
-            'Content-Type': 'application/json',
-            ...fetchOptions.headers,
-          }
-          retryHeaders['Authorization'] = `Bearer ${newAccessToken}`
+          const retryHeaders = new Headers(fetchOptions.headers)
+          retryHeaders.set('Content-Type', 'application/json')
+          retryHeaders.set('Authorization', `Bearer ${newAccessToken}`)
 
           const retryResponse = await fetch(url, {
             ...fetchOptions,
