@@ -207,23 +207,32 @@ export async function handleDiets(request: Request, env: Env, path: string): Pro
     const authResult = await requireAdmin(request, env)
     if (authResult instanceof Response) return authResult
 
-    const now = new Date().toISOString()
-    const existing = await db.select().from(schema.diets).where(eq(schema.diets.id, id)).get()
-    if (!existing) return notFound('Dieta no encontrada')
+    const id = path.slice(1)
+    try {
+      const body = await request.json().catch(() => ({}))
+      const parsed = dietSchema.partial().safeParse(body)
+      if (!parsed.success) return error(parsed.error.errors[0]?.message ?? 'Datos inválidos', 422)
 
-    if (parsed.data.status === 'active') {
-      await db.update(schema.diets)
-        .set({ status: 'archived', updatedAt: now })
-        .where(and(eq(schema.diets.userId, existing.userId), eq(schema.diets.status, 'active')))
+      const now = new Date().toISOString()
+      const existing = await db.select().from(schema.diets).where(eq(schema.diets.id, id)).get()
+      if (!existing) return notFound('Dieta no encontrada')
+
+      if (parsed.data.status === 'active') {
+        await db.update(schema.diets)
+          .set({ status: 'archived', updatedAt: now })
+          .where(and(eq(schema.diets.userId, existing.userId), eq(schema.diets.status, 'active')))
+      }
+
+      await db
+        .update(schema.diets)
+        .set({ ...parsed.data, updatedAt: now })
+        .where(eq(schema.diets.id, id))
+
+      const diet = await db.select().from(schema.diets).where(eq(schema.diets.id, id)).get()
+      return ok(diet)
+    } catch (err: any) {
+      return error(err.message || 'Error interno al actualizar la dieta', 500)
     }
-
-    await db
-      .update(schema.diets)
-      .set({ ...parsed.data, updatedAt: now })
-      .where(eq(schema.diets.id, id))
-
-    const diet = await db.select().from(schema.diets).where(eq(schema.diets.id, id)).get()
-    return ok(diet)
   }
 
   // DELETE /diets/:id — delete (admin only)

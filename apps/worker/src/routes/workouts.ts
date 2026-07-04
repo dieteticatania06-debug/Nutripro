@@ -191,31 +191,35 @@ export async function handleWorkouts(request: Request, env: Env, path: string): 
     const authResult = await requireAdmin(request, env)
     if (authResult instanceof Response) return authResult
     const id = path.slice(1)
-    const body = await request.json().catch(() => ({})) as Record<string, unknown>
-    const parsed = workoutSchema.safeParse(body)
-    if (!parsed.success) return error(parsed.error.errors[0]?.message ?? 'Datos inválidos', 422)
-    const { exercises, ...workoutData } = parsed.data
-    
-    // Validate if exists
-    const existing = await db.select().from(schema.workouts).where(eq(schema.workouts.id, id)).get()
-    if (!existing) return notFound()
+    try {
+      const body = await request.json().catch(() => ({})) as Record<string, unknown>
+      const parsed = workoutSchema.safeParse(body)
+      if (!parsed.success) return error(parsed.error.errors[0]?.message ?? 'Datos inválidos', 422)
+      const { exercises, ...workoutData } = parsed.data
+      
+      // Validate if exists
+      const existing = await db.select().from(schema.workouts).where(eq(schema.workouts.id, id)).get()
+      if (!existing) return notFound()
 
-    const now = new Date().toISOString()
-    if (workoutData.status === 'active') {
-      await db.update(schema.workouts)
-        .set({ status: 'archived', updatedAt: now })
-        .where(and(eq(schema.workouts.userId, existing.userId), eq(schema.workouts.status, 'active')))
+      const now = new Date().toISOString()
+      if (workoutData.status === 'active') {
+        await db.update(schema.workouts)
+          .set({ status: 'archived', updatedAt: now })
+          .where(and(eq(schema.workouts.userId, existing.userId), eq(schema.workouts.status, 'active')))
+      }
+      await db.update(schema.workouts).set({ ...workoutData, updatedAt: now }).where(eq(schema.workouts.id, id))
+      
+      // Replace exercises
+      await db.delete(schema.workoutExercises).where(eq(schema.workoutExercises.workoutId, id))
+      for (const ex of exercises) {
+        await db.insert(schema.workoutExercises).values({ id: generateId(), workoutId: id, ...ex })
+      }
+      
+      const updatedWorkout = await db.select().from(schema.workouts).where(eq(schema.workouts.id, id)).get()
+      return ok(updatedWorkout)
+    } catch (err: any) {
+      return error(err.message || 'Error interno al actualizar la rutina', 500)
     }
-    await db.update(schema.workouts).set({ ...workoutData, updatedAt: now }).where(eq(schema.workouts.id, id))
-    
-    // Replace exercises
-    await db.delete(schema.workoutExercises).where(eq(schema.workoutExercises.workoutId, id))
-    for (const ex of exercises) {
-      await db.insert(schema.workoutExercises).values({ id: generateId(), workoutId: id, ...ex })
-    }
-    
-    const updatedWorkout = await db.select().from(schema.workouts).where(eq(schema.workouts.id, id)).get()
-    return ok(updatedWorkout)
   }
 
   if (path.match(/^\/[a-f0-9-]{36}$/) && method === 'DELETE') {
