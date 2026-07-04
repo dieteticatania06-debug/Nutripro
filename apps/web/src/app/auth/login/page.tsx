@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -18,11 +18,23 @@ function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect') ?? ''
-  const { login, isLoading, user } = useAuthStore()
+  const { login, isLoading, user, isAuthenticated } = useAuthStore()
   const [showPassword, setShowPassword] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [progress, setProgress] = useState(0)
   const [loadingText, setLoadingText] = useState('Autenticando...')
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (redirect && redirect !== '/auth/login') {
+        router.replace(redirect)
+      } else if (user.role === 'admin') {
+        router.replace('/admin')
+      } else {
+        router.replace('/dashboard')
+      }
+    }
+  }, [isAuthenticated, user, redirect, router])
 
   const {
     register,

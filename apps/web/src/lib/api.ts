@@ -42,13 +42,30 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
   const { auth: _, ...fetchOptions } = options
   const url = `${WORKER_URL}${path}`
 
+  // Retrieve access token from Zustand store
+  let accessToken: string | null = null
+  if (typeof window !== 'undefined') {
+    try {
+      const { useAuthStore } = await import('@/features/auth/store/authStore')
+      accessToken = useAuthStore.getState().accessToken
+    } catch (e) {
+      console.error('Error getting token from Zustand store:', e)
+    }
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...fetchOptions.headers,
+  }
+
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`
+  }
+
   const response = await fetch(url, {
     ...fetchOptions,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...fetchOptions.headers,
-    },
+    headers,
   })
 
   if (response.status === 204) return undefined as T
@@ -74,13 +91,16 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
           }
 
           // Retry the original request
+          const retryHeaders: Record<string, string> = {
+            'Content-Type': 'application/json',
+            ...fetchOptions.headers,
+          }
+          retryHeaders['Authorization'] = `Bearer ${newAccessToken}`
+
           const retryResponse = await fetch(url, {
             ...fetchOptions,
             credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json',
-              ...fetchOptions.headers,
-            },
+            headers: retryHeaders,
           })
           if (retryResponse.status === 204) return undefined as T
           data = await retryResponse.json().catch(() => ({ success: false, error: 'Error de servidor' }))
