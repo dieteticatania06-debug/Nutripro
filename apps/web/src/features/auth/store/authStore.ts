@@ -87,7 +87,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'nutripro-auth',
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

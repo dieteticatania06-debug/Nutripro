@@ -127,7 +127,7 @@ export async function handleAuth(request: Request, env: Env, path: string): Prom
       id: generateId(),
       userId: user.id,
       token: refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     })
 
     const profile = await db.select({ plan: schema.profiles.plan }).from(schema.profiles).where(eq(schema.profiles.userId, user.id)).get()
@@ -151,7 +151,7 @@ export async function handleAuth(request: Request, env: Env, path: string): Prom
       httpOnly: true, secure: isProduction, sameSite: isProduction ? 'None' : 'Lax', maxAge: 900, // 15min
     }))
     headers.append('Set-Cookie', setCookieHeader('refresh_token', refreshToken, {
-      httpOnly: true, secure: isProduction, sameSite: isProduction ? 'None' : 'Lax', maxAge: 604800, // 7d
+      httpOnly: true, secure: isProduction, sameSite: isProduction ? 'None' : 'Lax', maxAge: 2592000, // 30d
     }))
 
     return new Response(response.body, { status: 200, headers })

@@ -22,7 +22,7 @@ export class TokenService {
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setJti(crypto.randomUUID())
-      .setExpirationTime('7d')
+      .setExpirationTime('30d')
       .sign(this.secret)
   }
 

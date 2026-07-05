@@ -16,7 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { fetchData, isLoaded } = useClientDashboardStore()
   const pathname = usePathname()
   const router = useRouter()
-  // Wait for Zustand persist to rehydrate from sessionStorage before acting
+  // Wait for Zustand persist to rehydrate from localStorage before acting
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {

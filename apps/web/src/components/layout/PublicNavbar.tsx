@@ -19,7 +19,7 @@ export function PublicNavbar() {
     setMounted(true)
   }, [])
 
-  // On mount, if sessionStorage says we're authenticated, verify the session
+  // On mount, if localStorage says we're authenticated, verify the session
   // is still valid with the backend. If not (stale token / DB reset), fetchMe
   // will call clear() and the navbar will update to the unauthenticated state.
   useEffect(() => {

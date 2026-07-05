@@ -10,7 +10,7 @@ export function AdminLayoutClient({ children }: { children: React.ReactNode }) {
   const { fetchData, isLoaded } = useAdminDashboardStore()
   const { isAuthenticated, user } = useAuthStore()
   const router = useRouter()
-  // Wait for Zustand persist to rehydrate from sessionStorage before acting
+  // Wait for Zustand persist to rehydrate from localStorage before acting
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {

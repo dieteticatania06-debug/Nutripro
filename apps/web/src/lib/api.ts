@@ -37,6 +37,7 @@ function cleanParams(params?: Record<string, any>): Record<string, string> {
   return clean
 }
 
+let refreshPromise: Promise<string | null> | null = null
 
 async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T> {
   const { auth: _, ...fetchOptions } = options
@@ -73,38 +74,54 @@ async function apiFetch<T>(path: string, options: FetchOptions = {}): Promise<T>
   if (response.status === 401 && path !== '/auth/refresh' && path !== '/auth/login') {
     let refreshed = false
     try {
-      const refreshResponse = await fetch(`${WORKER_URL}/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' }
-      })
-      if (refreshResponse.ok) {
-        const refreshData = await refreshResponse.json()
-        const newAccessToken = refreshData.data?.accessToken
-        if (newAccessToken) {
-          refreshed = true
-          if (typeof window !== 'undefined') {
-            const { useAuthStore } = await import('@/features/auth/store/authStore')
-            useAuthStore.getState().setAccessToken(newAccessToken)
+      if (!refreshPromise) {
+        refreshPromise = (async () => {
+          try {
+            const refreshResponse = await fetch(`${WORKER_URL}/auth/refresh`, {
+              method: 'POST',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' }
+            })
+            if (refreshResponse.ok) {
+              const refreshData = await refreshResponse.json()
+              const newAccessToken = refreshData.data?.accessToken
+              if (newAccessToken) {
+                if (typeof window !== 'undefined') {
+                  const { useAuthStore } = await import('@/features/auth/store/authStore')
+                  useAuthStore.getState().setAccessToken(newAccessToken)
+                }
+                return newAccessToken
+              }
+            }
+          } catch (err) {
+            console.error('Error in token refresh call:', err)
           }
+          return null
+        })().finally(() => {
+          refreshPromise = null
+        })
+      }
 
-          // Retry the original request
-          const retryHeaders = new Headers(fetchOptions.headers)
-          retryHeaders.set('Content-Type', 'application/json')
-          retryHeaders.set('Authorization', `Bearer ${newAccessToken}`)
+      const newAccessToken = await refreshPromise
+      if (newAccessToken) {
+        refreshed = true
 
-          const retryResponse = await fetch(url, {
-            ...fetchOptions,
-            credentials: 'include',
-            headers: retryHeaders,
-          })
-          if (retryResponse.status === 204) return undefined as T
-          data = await retryResponse.json().catch(() => ({ success: false, error: 'Error de servidor' }))
-          if (!retryResponse.ok) {
-            throw new ApiError(retryResponse.status, data.error ?? 'Error desconocido', data.errors)
-          }
-          return data.data as T
+        // Retry the original request
+        const retryHeaders = new Headers(fetchOptions.headers)
+        retryHeaders.set('Content-Type', 'application/json')
+        retryHeaders.set('Authorization', `Bearer ${newAccessToken}`)
+
+        const retryResponse = await fetch(url, {
+          ...fetchOptions,
+          credentials: 'include',
+          headers: retryHeaders,
+        })
+        if (retryResponse.status === 204) return undefined as T
+        data = await retryResponse.json().catch(() => ({ success: false, error: 'Error de servidor' }))
+        if (!retryResponse.ok) {
+          throw new ApiError(retryResponse.status, data.error ?? 'Error desconocido', data.errors)
         }
+        return data.data as T
       }
     } catch (e) {
       console.error('Error in apiFetch token refresh:', e)
