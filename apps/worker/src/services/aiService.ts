@@ -124,6 +124,11 @@ IMPORTANTE - FORMATO DE TEXTO DE COMIDAS:
 - En el campo "text" de cada comida, escribe ÚNICAMENTE el nombre de los alimentos, cantidades y preparación.
 - Está ESTRICTAMENTE PROHIBIDO incluir los macronutrientes o las calorías en el campo "text" (ej: NO pongas cosas como "(400 kcal, 30g proteína, ...)" al final del texto). Las calorías y macros deben ir únicamente en el objeto "macros" de la comida.
 
+IMPORTANTE - CÁLCULO DE MACRONUTRIENTES Y CALORÍAS (BEDCA):
+- Para calcular los macronutrientes (proteínas, carbohidratos, grasas en gramos) y las calorías (en kcal) de cada comida y alimento, debes basarte estrictamente en los valores oficiales de la base de datos BEDCA (Base de Datos Española de Composición de Alimentos).
+- Para cada ingrediente y alimento listado en la comida, identifica su peso en gramos. Utiliza la composición nutricional por cada 100g de dicho alimento en la base de datos oficial BEDCA para hacer el cálculo exacto según el peso indicado: (valores_BEDCA_por_100g * peso_alimento_en_gramos) / 100.
+- Suma los macronutrientes y calorías de todos los alimentos que componen la comida para obtener los macros totales de esa comida en el objeto "macros". No inventes ni aproximes al azar los valores; deben ser matemáticamente correctos y coherentes con los datos de BEDCA.
+
 
 Debes responder ÚNICAMENTE con un objeto JSON válido. El JSON debe cumplir exactamente con esta estructura:
 {
@@ -358,6 +363,13 @@ Por favor, crea una rutina de entrenamiento balanceada, detallada y totalmente a
     }[]
   }> {
     const systemPrompt = `Eres un nutricionista experto y base de datos de composición de alimentos. Tu tarea es calcular de forma precisa y realista los macronutrientes (proteínas, carbohidratos, grasas en gramos y calorías en kcal) para la lista de comidas o alimentos proporcionada.
+
+IMPORTANTE - USO DE VALORES OFICIALES DE BEDCA:
+- Debes utilizar estrictamente los datos oficiales de la base de datos BEDCA (Base de Datos Española de Composición de Alimentos) para cada alimento y su correspondiente peso asignado.
+- Identifica el peso en gramos de cada alimento especificado en el texto de la comida.
+- Calcula los macros exactos multiplicando los valores nutricionales por cada 100g del alimento según BEDCA por (peso_del_alimento / 100).
+- Suma los macronutrientes y calorías de todos los alimentos de la comida para obtener el total preciso de proteínas, carbohidratos, grasas y calorías de esa comida en el objeto "macros". Los valores calculados deben ser matemáticamente precisos, realistas y coherentes con los oficiales de BEDCA.
+
 Responde ÚNICAMENTE con un objeto JSON válido que contenga la lista de comidas con sus respectivos macronutrientes.
 Ejemplo de estructura de respuesta:
 {
