@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from '@/hooks/use-toast'
 import { formatDate, LEVEL_ES, getAvatarUrl, cn } from '@/lib/utils'
 import Image from 'next/image'
-import { Plus, X, PlusCircle, Trash2, Search, ChevronDown, ChevronUp, Dumbbell, Pencil, Sparkles, Crown, Shield, Activity } from 'lucide-react'
+import { Plus, X, PlusCircle, Trash2, Search, ChevronDown, ChevronUp, Dumbbell, Pencil, Sparkles, Crown, Shield, Activity, Archive, Calendar } from 'lucide-react'
 
 interface ClientOption {
   id: string
@@ -36,7 +36,6 @@ const planBadgeProps: Record<string, { label: string; variant: 'default' | 'succ
 }
 
 import { Loader } from '@/components/ui/loader'
-
 import { useAdminDashboardStore } from '@/features/dashboard/store/dashboardStore'
 
 export default function AdminRutinasPage() {
@@ -49,16 +48,18 @@ export default function AdminRutinasPage() {
     reloadWorkouts,
     reloadClients
   } = useAdminDashboardStore()
+
   const [workouts, setWorkouts] = useState<Workout[]>([])
   const [clients, setClients] = useState<ClientOption[]>([])
   const [isLoading, setIsLoading] = useState(!workoutsLoaded || !clientsLoaded)
-  const [showForm, setShowForm] = useState(false)
   const [exercises, setExercises] = useState<ExerciseForm[]>([{ name: '', sets: '', reps: '', rest: '', notes: '', day: 'Lunes' }])
   const [activeExerciseTab, setActiveExerciseTab] = useState<string>('Lunes')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [search, setSearch] = useState('')
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null)
-  const [editingWorkoutId, setEditingWorkoutId] = useState<string | null>(null)
+  const [editorClientId, setEditorClientId] = useState<string | null>(null)
+  const [editingWorkout, setEditingWorkout] = useState<Workout | undefined>(undefined)
+  const [loadedWorkouts, setLoadedWorkouts] = useState<Record<string, any>>({})
   const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [isGeneratingAi, setIsGeneratingAi] = useState<Record<string, boolean>>({})
@@ -107,13 +108,29 @@ export default function AdminRutinasPage() {
     }
   }, [workoutToDelete])
 
+  // Automatically fetch full details for expanded client's workouts
+  useEffect(() => {
+    if (expandedClientId) {
+      const clientWorkouts = workouts.filter((w) => w.userId === expandedClientId)
+      clientWorkouts.forEach(async (w) => {
+        if (!loadedWorkouts[w.id]) {
+          try {
+            const full = await workoutsApi.get(w.id)
+            setLoadedWorkouts(prev => ({ ...prev, [w.id]: full }))
+          } catch (e) {
+            console.error('Error fetching full workout details:', e)
+          }
+        }
+      })
+    }
+  }, [expandedClientId, workouts, loadedWorkouts])
+
   const addExercise = () => setExercises((prev) => [...prev, { name: '', sets: '', reps: '', rest: '', notes: '', day: activeExerciseTab === 'Otros' ? '' : activeExerciseTab }])
   const removeExercise = (i: number) => setExercises((prev) => prev.filter((_, idx) => idx !== i))
   const updateExercise = (i: number, field: keyof ExerciseForm, value: string) => {
     setExercises((prev) => prev.map((ex, idx) => idx === i ? { ...ex, [field]: value } : ex))
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const onSubmit = async (data: any) => {
     setIsSubmitting(true)
     try {
@@ -128,17 +145,14 @@ export default function AdminRutinasPage() {
           day: ex.day || null,
           order: i,
         }))
-      if (editingWorkoutId) {
-        await workoutsApi.update(editingWorkoutId, { ...data, exercises: exerciseData })
+      if (editingWorkout?.id) {
+        await workoutsApi.update(editingWorkout.id, { ...data, exercises: exerciseData })
         toast({ title: 'Rutina actualizada' })
       } else {
         await workoutsApi.create({ ...data, exercises: exerciseData })
         toast({ title: 'Rutina creada y asignada' })
       }
-      setShowForm(false)
-      setEditingWorkoutId(null)
-      reset()
-      setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: '' }])
+      closeEditor()
       await load()
     } catch (err) {
       toast({ title: 'Error', description: err instanceof ApiError ? err.message : 'Error', variant: 'destructive' })
@@ -190,25 +204,37 @@ export default function AdminRutinasPage() {
     }
   }
 
-  const handleNewWorkoutForClient = (clientId: string) => {
-    setEditingWorkoutId(null)
-    reset({ userId: clientId, exercises: [] } as Partial<WorkoutInput>)
+  const openNewWorkout = (clientId: string) => {
+    setExpandedClientId(clientId)
+    setEditorClientId(clientId)
+    setEditingWorkout(undefined)
+    reset({
+      userId: clientId,
+      title: '',
+      level: undefined,
+      daysPerWeek: undefined,
+      duration: undefined,
+      description: undefined,
+      exercises: []
+    } as Partial<WorkoutInput>)
     setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: 'Lunes' }])
     setActiveExerciseTab('Lunes')
-    setValue('userId', clientId)
-    setShowForm(true)
   }
 
-  const handleEditWorkout = async (w: Workout) => {
-    setEditingWorkoutId(w.id)
-    setValue('userId', w.userId)
-    setValue('title', w.title.replace(/^Borrador:\s*/i, ''))
-    setValue('level', w.level ?? undefined)
-    setValue('daysPerWeek', w.daysPerWeek ?? undefined)
-    setValue('duration', w.duration ?? undefined)
-    setValue('description', w.description ?? undefined)
+  const openEditWorkout = async (w: Workout) => {
+    setExpandedClientId(w.userId)
+    setEditorClientId(w.userId)
+    setEditingWorkout(w)
+    reset({
+      userId: w.userId,
+      title: w.title.replace(/^Borrador:\s*/i, ''),
+      level: w.level ?? undefined,
+      daysPerWeek: w.daysPerWeek ?? undefined,
+      duration: w.duration ?? undefined,
+      description: w.description ?? undefined,
+      exercises: []
+    } as Partial<WorkoutInput>)
     
-    // fetch full workout details to get exercises
     try {
       const full = await workoutsApi.get(w.id)
       if (full && full.exercises && full.exercises.length > 0) {
@@ -230,247 +256,23 @@ export default function AdminRutinasPage() {
       setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: 'Lunes' }])
       setActiveExerciseTab('Lunes')
     }
-    
-    setExpandedClientId(w.userId)
-    setShowForm(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const closeEditor = () => {
+    setEditorClientId(null)
+    setEditingWorkout(undefined)
+    reset()
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Gestión de Rutinas</h1>
           <p className="text-muted-foreground">Crear y asignar programas de entrenamiento</p>
         </div>
       </div>
-
-      {showForm && (
-        <Card className="border border-white/40 bg-white/45 backdrop-blur-xl">
-          <CardHeader><CardTitle className="text-base">{editingWorkoutId ? 'Editar Rutina' : 'Nueva Rutina'}</CardTitle></CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-1">
-                <Label>Asignar a cliente *</Label>
-                <select {...register('userId')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  <option value="">— Seleccionar —</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{`${c.firstName ?? ''} ${c.lastName ?? ''}`.trim() || c.email}</option>
-                  ))}
-                </select>
-                {errors.userId && <p className="text-xs text-destructive">{errors.userId.message}</p>}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label>Título *</Label>
-                  <Input placeholder="Ej: Rutina de fuerza 3x semana" {...register('title')} />
-                  {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
-                </div>
-                <div className="space-y-1">
-                  <Label>Nivel</Label>
-                  <select {...register('level')} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    <option value="">— Sin nivel —</option>
-                    <option value="beginner">Principiante</option>
-                    <option value="intermediate">Intermedio</option>
-                    <option value="advanced">Avanzado</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label>Días/semana</Label>
-                  <Input type="number" min="1" max="7" {...register('daysPerWeek', { valueAsNumber: true })} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Duración (min)</Label>
-                  <Input type="number" {...register('duration', { valueAsNumber: true })} />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label>Descripción</Label>
-                <Textarea placeholder="Descripción de la rutina..." {...register('description')} />
-              </div>
-
-              {/* Exercises */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <Label className="text-sm font-bold">Ejercicios</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addExercise} className="bg-primary/5 hover:bg-primary/10 text-primary border-primary/20">
-                    <PlusCircle className="h-4 w-4 mr-1 text-primary" /> Añadir ejercicio
-                  </Button>
-                </div>
-
-                {/* Day Selector Tabs */}
-                <div className="flex flex-wrap gap-1 mb-4 p-1 bg-muted/40 rounded-lg border">
-                  {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Otros'].map((day) => {
-                    const count = exercises.filter((ex) => {
-                      if (day === 'Otros') {
-                        return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
-                      }
-                      return ex.day === day
-                    }).length
-
-                    return (
-                      <Button
-                        key={day}
-                        type="button"
-                        variant={activeExerciseTab === day ? 'default' : 'ghost'}
-                        size="sm"
-                        onClick={() => setActiveExerciseTab(day)}
-                        className={cn(
-                          "text-xs font-semibold px-3 py-1.5 rounded-md transition-all shrink-0 h-8",
-                          activeExerciseTab === day
-                            ? "bg-primary text-primary-foreground shadow-sm"
-                            : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {day}
-                        {count > 0 && (
-                          <span className={cn(
-                            "ml-1.5 px-1.5 py-0.5 text-[9px] rounded-full font-bold",
-                            activeExerciseTab === day ? "bg-white/25 text-white" : "bg-primary/10 text-primary"
-                          )}>
-                            {count}
-                          </span>
-                        )}
-                      </Button>
-                    )
-                  })}
-                </div>
-
-                <div className="space-y-3">
-                  {(() => {
-                    const filtered = exercises.map((ex, index) => ({ ex, index })).filter(({ ex }) => {
-                      if (activeExerciseTab === 'Otros') {
-                        return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
-                      }
-                      return ex.day === activeExerciseTab
-                    })
-
-                    if (filtered.length === 0) {
-                      return (
-                        <div className="text-center py-8 border border-dashed rounded-lg bg-muted/5 flex flex-col items-center justify-center space-y-2">
-                          <p className="text-xs text-muted-foreground">No hay ejercicios asignados al {activeExerciseTab === 'Otros' ? 'resto de días' : activeExerciseTab} en esta rutina.</p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="link"
-                            onClick={() => {
-                              setExercises((prev) => [
-                                ...prev,
-                                { name: '', sets: '', reps: '', rest: '', notes: '', day: activeExerciseTab === 'Otros' ? '' : activeExerciseTab }
-                              ])
-                            }}
-                            className="text-xs font-semibold text-primary"
-                          >
-                            + Añadir primer ejercicio para el {activeExerciseTab === 'Otros' ? 'día' : activeExerciseTab}
-                          </Button>
-                        </div>
-                      )
-                    }
-
-                    return filtered.map(({ ex, index }) => (
-                      <div key={index} className="grid grid-cols-12 gap-3 items-start border border-muted-foreground/15 rounded-lg p-3 bg-muted/5 hover:border-primary/20 transition-all shadow-sm">
-                        {/* Name */}
-                        <div className="col-span-12 sm:col-span-4 space-y-1">
-                          <Label className="text-xs font-semibold text-foreground/80">Ejercicio</Label>
-                          <Input
-                            value={ex.name}
-                            onChange={(e) => updateExercise(index, 'name', e.target.value)}
-                            placeholder="Sentadilla con barra"
-                            className="h-9"
-                          />
-                        </div>
-
-                        {/* Sets */}
-                        <div className="col-span-4 sm:col-span-2 space-y-1">
-                          <Label className="text-xs font-semibold text-foreground/80">Series</Label>
-                          <Input
-                            value={ex.sets}
-                            onChange={(e) => updateExercise(index, 'sets', e.target.value)}
-                            placeholder="4"
-                            className="h-9"
-                          />
-                        </div>
-
-                        {/* Reps */}
-                        <div className="col-span-4 sm:col-span-2 space-y-1">
-                          <Label className="text-xs font-semibold text-foreground/80">Reps</Label>
-                          <Input
-                            value={ex.reps}
-                            onChange={(e) => updateExercise(index, 'reps', e.target.value)}
-                            placeholder="8-12"
-                            className="h-9"
-                          />
-                        </div>
-
-                        {/* Rest */}
-                        <div className="col-span-4 sm:col-span-2 space-y-1">
-                          <Label className="text-xs font-semibold text-foreground/80">Descanso</Label>
-                          <Input
-                            value={ex.rest}
-                            onChange={(e) => updateExercise(index, 'rest', e.target.value)}
-                            placeholder="90s"
-                            className="h-9"
-                          />
-                        </div>
-
-                        {/* Day selection inside item in case they want to move it */}
-                        <div className="col-span-12 sm:col-span-2 space-y-1">
-                          <Label className="text-xs font-semibold text-foreground/80">Día</Label>
-                          <select
-                            value={ex.day || ''}
-                            onChange={(e) => updateExercise(index, 'day', e.target.value)}
-                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
-                          >
-                            <option value="">Sin día</option>
-                            <option value="Lunes">Lunes</option>
-                            <option value="Martes">Martes</option>
-                            <option value="Miércoles">Miércoles</option>
-                            <option value="Jueves">Jueves</option>
-                            <option value="Viernes">Viernes</option>
-                            <option value="Sábado">Sábado</option>
-                            <option value="Domingo">Domingo</option>
-                          </select>
-                        </div>
-
-                        {/* Notes input */}
-                        <div className="col-span-11 mt-1 space-y-1">
-                          <Label className="text-[11px] font-semibold text-muted-foreground">Notas / Instrucciones adicionales</Label>
-                          <Input
-                            value={ex.notes || ''}
-                            onChange={(e) => updateExercise(index, 'notes', e.target.value)}
-                            placeholder="Ej: Foco excéntrico controlado de 3s, RIR 1"
-                            className="h-8 text-xs bg-background"
-                          />
-                        </div>
-
-                        {/* Delete button */}
-                        <div className="col-span-1 mt-1 flex items-end justify-center">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
-                            onClick={() => removeExercise(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  })()}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Crear y Asignar'}</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Search client */}
       <div className="relative max-w-sm">
@@ -486,13 +288,24 @@ export default function AdminRutinasPage() {
       {isLoading ? (
         <Loader label="Cargando rutinas..." />
       ) : filteredClients.length === 0 ? (
-        <Card><CardContent className="text-center py-8 text-muted-foreground">No se encontraron clientes</CardContent></Card>
+        <Card className="border border-white/40 bg-white/45 backdrop-blur-xl">
+          <CardContent className="text-center py-10 text-muted-foreground">
+            No se encontraron clientes
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
           {filteredClients.map((client) => {
             const clientWorkouts = workouts.filter((w) => w.userId === client.id)
+            const activeWorkout = clientWorkouts.find((w) => w.status === 'active')
+            const draftWorkout = clientWorkouts.find((w) => w.status === 'draft')
+            const archivedWorkouts = clientWorkouts.filter((w) => w.status === 'archived')
             const isExpanded = expandedClientId === client.id
+            const isEditing = editorClientId === client.id
             const clientName = `${client.firstName ?? ''} ${client.lastName ?? ''}`.trim() || client.email
+
+            const fullActiveWorkout = activeWorkout ? (loadedWorkouts[activeWorkout.id] || activeWorkout) : null
+            const fullDraftWorkout = draftWorkout ? (loadedWorkouts[draftWorkout.id] || draftWorkout) : null
 
             return (
               <Card key={client.id} className="overflow-hidden border border-white/40 bg-white/45 backdrop-blur-xl shadow-sm">
@@ -526,12 +339,12 @@ export default function AdminRutinasPage() {
                     ) : (
                       <Badge variant="secondary" className="text-[10px] py-0.5 px-2">Sin plan</Badge>
                     )}
-                    {clientWorkouts.some((w) => w.status === 'active') ? (
+                    {activeWorkout ? (
                       <Badge variant="success" className="text-[10px] gap-1 py-0.5 px-2 rounded-full font-medium">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                         Activa
                       </Badge>
-                    ) : clientWorkouts.some((w) => w.status === 'draft') ? (
+                    ) : draftWorkout ? (
                       <Badge variant="warning" className="text-[10px] gap-1 py-0.5 px-2 rounded-full font-medium bg-amber-500/10 text-amber-600 border-amber-200">
                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                         Borrador listo
@@ -549,9 +362,9 @@ export default function AdminRutinasPage() {
                       <Sparkles className="h-3.5 w-3.5 text-purple-600 animate-spin-slow" />
                       {isGeneratingAi[client.id] ? 'Generando...' : 'Generar con IA'}
                     </Button>
-                    <Button size="sm" variant="outline" className="h-8" onClick={() => handleNewWorkoutForClient(client.id)}>
+                    <Button size="sm" variant="outline" className="h-8 text-xs gap-1" onClick={() => openNewWorkout(client.id)}>
                       <Plus className="h-3.5 w-3.5 mr-1" />
-                      Asignar Rutina
+                      Nueva Rutina
                     </Button>
                     <Button
                       size="icon"
@@ -565,86 +378,452 @@ export default function AdminRutinasPage() {
                 </CardHeader>
 
                 {isExpanded && (
-                  <CardContent className="p-4 border-t divide-y divide-muted/50 bg-transparent">
-                    {clientWorkouts.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-4">Este cliente aún no tiene rutinas asignadas.</p>
-                    ) : (
-                      clientWorkouts.map((w) => (
-                        <div key={w.id} className="py-3 first:pt-0 last:pb-0 flex items-start justify-between gap-3">
-                          <div className="space-y-1 flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-medium text-foreground">{w.title}</p>
-                              <Badge
-                                variant={w.status === 'draft' ? 'warning' : (w.status === 'active' ? 'success' : 'secondary')}
-                                className={cn(
-                                  "text-[10px] py-0 px-1.5",
-                                  w.status === 'draft' && "bg-amber-500/10 text-amber-600 border-amber-200"
-                                )}
-                              >
-                                {w.status === 'draft' ? 'Borrador' : (w.status === 'active' ? 'Activa' : 'Archivada')}
-                              </Badge>
-                              {w.level && <Badge variant="outline" className="text-[10px]">{LEVEL_ES[w.level]}</Badge>}
+                  <CardContent className="p-5 border-t space-y-6 bg-transparent">
+                    {/* Form Editor Inline */}
+                    {isEditing && (
+                      <div className="rounded-xl border-2 border-primary/30 bg-primary/[0.02] p-5 space-y-4">
+                        <p className="text-sm font-bold text-primary flex items-center gap-2">
+                          <Pencil className="h-4 w-4" />
+                          {editingWorkout ? 'Editando rutina activa' : 'Nueva rutina para este cliente'}
+                        </p>
+                        
+                        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <Label className="text-xs font-semibold">Título *</Label>
+                              <Input placeholder="Ej: Rutina de fuerza 3x semana" {...register('title')} className="h-9" />
+                              {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              Asignada el {formatDate(w.assignedAt)}
-                              {w.daysPerWeek && ` · ${w.daysPerWeek} días/sem`}
-                            </p>
+                            <div className="space-y-1">
+                              <Label className="text-xs font-semibold">Nivel</Label>
+                              <select {...register('level')} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm">
+                                <option value="">— Sin nivel —</option>
+                                <option value="beginner">Principiante</option>
+                                <option value="intermediate">Intermedio</option>
+                                <option value="advanced">Avanzado</option>
+                              </select>
+                            </div>
                           </div>
-                          <div className="flex gap-1.5 shrink-0 items-center">
-                            {w.status === 'draft' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 text-xs gap-1 border-amber-200 text-amber-700 hover:bg-amber-50 bg-amber-500/[0.02]"
-                                onClick={async () => {
-                                  try {
-                                    const cleanTitle = w.title.replace(/^Borrador:\s*/i, '')
-                                    // Fetch full workout details to keep exercises when updating status
-                                    const full = await workoutsApi.get(w.id)
-                                    await workoutsApi.update(w.id, {
-                                      userId: w.userId,
-                                      title: cleanTitle,
-                                      level: w.level || undefined,
-                                      daysPerWeek: w.daysPerWeek || undefined,
-                                      duration: w.duration || undefined,
-                                      description: w.description || undefined,
-                                      status: 'active',
-                                      exercises: full.exercises || []
-                                    })
-                                    toast({ title: 'Rutina confirmada y enviada al cliente' })
-                                    await load()
-                                  } catch (err) {
-                                    toast({ 
-                                      title: 'Error al confirmar la rutina', 
-                                      description: err instanceof ApiError ? err.message : 'Error desconocido',
-                                      variant: 'destructive' 
-                                    })
-                                  }
-                                }}
-                              >
-                                <Activity className="h-3.5 w-3.5" />
-                                Confirmar y Enviar
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <Label className="text-xs font-semibold">Días/semana</Label>
+                              <Input type="number" min="1" max="7" {...register('daysPerWeek', { valueAsNumber: true })} className="h-9" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs font-semibold">Duración (min)</Label>
+                              <Input type="number" {...register('duration', { valueAsNumber: true })} className="h-9" />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs font-semibold">Descripción</Label>
+                            <Textarea placeholder="Descripción de la rutina..." {...register('description')} className="min-h-16 text-sm" />
+                          </div>
+
+                          {/* Exercises block */}
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <Label className="text-sm font-bold">Ejercicios</Label>
+                              <Button type="button" size="sm" variant="outline" onClick={addExercise} className="bg-primary/5 hover:bg-primary/10 text-primary border-primary/20">
+                                <PlusCircle className="h-4 w-4 mr-1 text-primary" /> Añadir ejercicio
                               </Button>
+                            </div>
+
+                            {/* Day Selector Tabs */}
+                            <div className="flex flex-wrap gap-1 mb-4 p-1 bg-muted/40 rounded-lg border">
+                              {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Otros'].map((day) => {
+                                const count = exercises.filter((ex) => {
+                                  if (day === 'Otros') {
+                                    return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
+                                  }
+                                  return ex.day === day
+                                }).length
+
+                                return (
+                                  <Button
+                                    key={day}
+                                    type="button"
+                                    variant={activeExerciseTab === day ? 'default' : 'ghost'}
+                                    size="sm"
+                                    onClick={() => setActiveExerciseTab(day)}
+                                    className={cn(
+                                      "text-xs font-semibold px-3 py-1.5 rounded-md transition-all shrink-0 h-8",
+                                      activeExerciseTab === day
+                                        ? "bg-primary text-primary-foreground shadow-sm"
+                                        : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                                    )}
+                                  >
+                                    {day}
+                                    {count > 0 && (
+                                      <span className={cn(
+                                        "ml-1.5 px-1.5 py-0.5 text-[9px] rounded-full font-bold",
+                                        activeExerciseTab === day ? "bg-white/25 text-white" : "bg-primary/10 text-primary"
+                                      )}>
+                                        {count}
+                                      </span>
+                                    )}
+                                  </Button>
+                                )
+                              })}
+                            </div>
+
+                            <div className="space-y-3">
+                              {(() => {
+                                const filtered = exercises.map((ex, index) => ({ ex, index })).filter(({ ex }) => {
+                                  if (activeExerciseTab === 'Otros') {
+                                    return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
+                                  }
+                                  return ex.day === activeExerciseTab
+                                })
+
+                                if (filtered.length === 0) {
+                                  return (
+                                    <div className="text-center py-8 border border-dashed rounded-lg bg-muted/5 flex flex-col items-center justify-center space-y-2">
+                                      <p className="text-xs text-muted-foreground">No hay ejercicios asignados al {activeExerciseTab === 'Otros' ? 'resto de días' : activeExerciseTab} en esta rutina.</p>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="link"
+                                        onClick={() => {
+                                          setExercises((prev) => [
+                                            ...prev,
+                                            { name: '', sets: '', reps: '', rest: '', notes: '', day: activeExerciseTab === 'Otros' ? '' : activeExerciseTab }
+                                          ])
+                                        }}
+                                        className="text-xs font-semibold text-primary"
+                                      >
+                                        + Añadir primer ejercicio para el {activeExerciseTab === 'Otros' ? 'día' : activeExerciseTab}
+                                      </Button>
+                                    </div>
+                                  )
+                                }
+
+                                return filtered.map(({ ex, index }) => (
+                                  <div key={index} className="grid grid-cols-12 gap-3 items-start border border-muted-foreground/15 rounded-lg p-3 bg-muted/5 hover:border-primary/20 transition-all shadow-sm">
+                                    {/* Name */}
+                                    <div className="col-span-12 sm:col-span-4 space-y-1">
+                                      <Label className="text-xs font-semibold text-foreground/80">Ejercicio</Label>
+                                      <Input
+                                        value={ex.name}
+                                        onChange={(e) => updateExercise(index, 'name', e.target.value)}
+                                        placeholder="Sentadilla con barra"
+                                        className="h-9"
+                                      />
+                                    </div>
+
+                                    {/* Sets */}
+                                    <div className="col-span-4 sm:col-span-2 space-y-1">
+                                      <Label className="text-xs font-semibold text-foreground/80">Series</Label>
+                                      <Input
+                                        value={ex.sets}
+                                        onChange={(e) => updateExercise(index, 'sets', e.target.value)}
+                                        placeholder="4"
+                                        className="h-9"
+                                      />
+                                    </div>
+
+                                    {/* Reps */}
+                                    <div className="col-span-4 sm:col-span-2 space-y-1">
+                                      <Label className="text-xs font-semibold text-foreground/80">Reps</Label>
+                                      <Input
+                                        value={ex.reps}
+                                        onChange={(e) => updateExercise(index, 'reps', e.target.value)}
+                                        placeholder="8-12"
+                                        className="h-9"
+                                      />
+                                    </div>
+
+                                    {/* Rest */}
+                                    <div className="col-span-4 sm:col-span-2 space-y-1">
+                                      <Label className="text-xs font-semibold text-foreground/80">Descanso</Label>
+                                      <Input
+                                        value={ex.rest}
+                                        onChange={(e) => updateExercise(index, 'rest', e.target.value)}
+                                        placeholder="90s"
+                                        className="h-9"
+                                      />
+                                    </div>
+
+                                    {/* Day selection inside item in case they want to move it */}
+                                    <div className="col-span-12 sm:col-span-2 space-y-1">
+                                      <Label className="text-xs font-semibold text-foreground/80">Día</Label>
+                                      <select
+                                        value={ex.day || ''}
+                                        onChange={(e) => updateExercise(index, 'day', e.target.value)}
+                                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                                      >
+                                        <option value="">Sin día</option>
+                                        <option value="Lunes">Lunes</option>
+                                        <option value="Martes">Martes</option>
+                                        <option value="Miércoles">Miércoles</option>
+                                        <option value="Jueves">Jueves</option>
+                                        <option value="Viernes">Viernes</option>
+                                        <option value="Sábado">Sábado</option>
+                                        <option value="Domingo">Domingo</option>
+                                      </select>
+                                    </div>
+
+                                    {/* Notes input */}
+                                    <div className="col-span-11 mt-1 space-y-1">
+                                      <Label className="text-[11px] font-semibold text-muted-foreground">Notas / Instrucciones adicionales</Label>
+                                      <Input
+                                        value={ex.notes || ''}
+                                        onChange={(e) => updateExercise(index, 'notes', e.target.value)}
+                                        placeholder="Ej: Foco excéntrico controlado de 3s, RIR 1"
+                                        className="h-8 text-xs bg-background"
+                                      />
+                                    </div>
+
+                                    {/* Delete button */}
+                                    <div className="col-span-1 mt-1 flex items-end justify-center">
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
+                                        onClick={() => removeExercise(index)}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))
+                              })()}
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 pt-2">
+                            <Button type="submit" size="sm" disabled={isSubmitting}>{isSubmitting ? 'Guardando...' : 'Crear y Asignar'}</Button>
+                            <Button type="button" size="sm" variant="outline" onClick={closeEditor}>Cancelar</Button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Draft Routine View */}
+                    {draftWorkout && !isEditing && (
+                      <div className="space-y-4 p-5 rounded-2xl border border-amber-200/80 bg-amber-500/[0.015] backdrop-blur-sm shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-200/50 pb-4">
+                          <div className="space-y-1">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-700 border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              Borrador pendiente de revisión
+                            </div>
+                            <h3 className="text-sm font-bold text-foreground mt-1">
+                              {draftWorkout.title}
+                            </h3>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {draftWorkout.daysPerWeek && `${draftWorkout.daysPerWeek} días/sem`}
+                              {draftWorkout.duration && ` · ${draftWorkout.duration} min`}
+                              {draftWorkout.level && ` · ${LEVEL_ES[draftWorkout.level]}`}
+                            </p>
+                            {draftWorkout.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{draftWorkout.description}</p>
                             )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 shrink-0">
                             <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-muted-foreground hover:text-primary"
-                              onClick={() => handleEditWorkout(w)}
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs gap-1 border-amber-200 text-amber-700 hover:bg-amber-50"
+                              onClick={() => openEditWorkout(draftWorkout)}
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Pencil className="h-3.5 w-3.5" />
+                              Revisar/Editar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="h-8 text-xs gap-1 bg-amber-600 hover:bg-amber-700 text-white shadow-sm font-bold"
+                              onClick={async () => {
+                                try {
+                                  const cleanTitle = draftWorkout.title.replace(/^Borrador:\s*/i, '')
+                                  const full = await workoutsApi.get(draftWorkout.id)
+                                  await workoutsApi.update(draftWorkout.id, {
+                                    userId: draftWorkout.userId,
+                                    title: cleanTitle,
+                                    level: draftWorkout.level || undefined,
+                                    daysPerWeek: draftWorkout.daysPerWeek || undefined,
+                                    duration: draftWorkout.duration || undefined,
+                                    description: draftWorkout.description || undefined,
+                                    status: 'active',
+                                    exercises: full.exercises || []
+                                  })
+                                  toast({ title: 'Rutina confirmada y enviada al cliente' })
+                                  await load()
+                                } catch (err) {
+                                  toast({ 
+                                    title: 'Error al confirmar la rutina', 
+                                    description: err instanceof ApiError ? err.message : 'Error desconocido',
+                                    variant: 'destructive' 
+                                  })
+                                }
+                              }}
+                            >
+                              <Activity className="h-3.5 w-3.5" />
+                              Confirmar y Enviar
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Draft exercises preview */}
+                        {fullDraftWorkout && fullDraftWorkout.exercises && fullDraftWorkout.exercises.length > 0 && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                            {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Otros'].map(day => {
+                              const dayExs = fullDraftWorkout.exercises.filter(ex => {
+                                if (day === 'Otros') {
+                                  return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
+                                }
+                                return ex.day === day
+                              })
+                              if (dayExs.length === 0) return null
+                              return (
+                                <div key={day} className="p-3 rounded-xl border bg-white/50 backdrop-blur-md space-y-2">
+                                  <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider">{day}</h4>
+                                  <div className="space-y-1.5">
+                                    {dayExs.map((ex, idx) => (
+                                      <div key={idx} className="text-xs border-b border-muted/50 pb-1.5 last:border-0 last:pb-0">
+                                        <p className="font-semibold text-foreground">{ex.name}</p>
+                                        <p className="text-[10px] text-muted-foreground">
+                                          {ex.sets ? `${ex.sets} series` : ''}
+                                          {ex.reps ? ` x ${ex.reps}` : ''}
+                                          {ex.rest ? ` (Descanso: ${ex.rest})` : ''}
+                                        </p>
+                                        {ex.notes && <p className="text-[10px] text-muted-foreground italic mt-0.5">Nota: {ex.notes}</p>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Active Routine View */}
+                    {activeWorkout && !isEditing && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              {activeWorkout.title}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              Asignada el {formatDate(activeWorkout.assignedAt)}
+                              {activeWorkout.daysPerWeek && ` · ${activeWorkout.daysPerWeek} días/sem`}
+                              {activeWorkout.duration && ` · ${activeWorkout.duration} min`}
+                              {activeWorkout.level && ` · ${LEVEL_ES[activeWorkout.level]}`}
+                            </p>
+                            {activeWorkout.description && (
+                              <p className="text-xs text-muted-foreground mt-1">{activeWorkout.description}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-8 text-xs gap-1"
+                              onClick={() => openEditWorkout(activeWorkout)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Editar
                             </Button>
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
-                              onClick={() => handleDelete(w.id)}
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                              onClick={() => handleDelete(activeWorkout.id)}
                             >
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
-                      ))
+
+                        {/* Active exercises preview */}
+                        {fullActiveWorkout && fullActiveWorkout.exercises && fullActiveWorkout.exercises.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                            {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Otros'].map(day => {
+                              const dayExs = fullActiveWorkout.exercises.filter(ex => {
+                                if (day === 'Otros') {
+                                  return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
+                                }
+                                return ex.day === day
+                              })
+                              if (dayExs.length === 0) return null
+                              return (
+                                <div key={day} className="p-3 rounded-xl border bg-white/50 backdrop-blur-md space-y-2">
+                                  <h4 className="text-xs font-bold text-[#4A7C59] uppercase tracking-wider">{day}</h4>
+                                  <div className="space-y-1.5">
+                                    {dayExs.map((ex, idx) => (
+                                      <div key={idx} className="text-xs border-b border-muted/50 pb-1.5 last:border-0 last:pb-0">
+                                        <p className="font-semibold text-foreground">{ex.name}</p>
+                                        <p className="text-[10px] text-muted-foreground">
+                                          {ex.sets ? `${ex.sets} series` : ''}
+                                          {ex.reps ? ` x ${ex.reps}` : ''}
+                                          {ex.rest ? ` (Descanso: ${ex.rest})` : ''}
+                                        </p>
+                                        {ex.notes && <p className="text-[10px] text-muted-foreground italic mt-0.5">Nota: {ex.notes}</p>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Cargando ejercicios...</p>
+                        )}
+                      </div>
+                    )}
+
+                    {!activeWorkout && !draftWorkout && !isEditing && (
+                      <div className="text-center py-6 text-muted-foreground text-sm space-y-3">
+                        <Dumbbell className="h-8 w-8 mx-auto opacity-30" />
+                        <p>Este cliente no tiene ninguna rutina activa asignada.</p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1 text-xs"
+                          onClick={() => openNewWorkout(client.id)}
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Asignar primera rutina
+                        </Button>
+                      </div>
+                    )}
+
+                    {archivedWorkouts.length > 0 && (
+                      <div className="space-y-2 pt-4 border-t border-muted/30">
+                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                          <Archive className="h-3.5 w-3.5" />
+                          Historial de rutinas archivadas ({archivedWorkouts.length})
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {archivedWorkouts.map((w) => (
+                            <div
+                              key={w.id}
+                              className="flex items-center justify-between p-3 rounded-lg border border-white/20 bg-white/20 backdrop-blur-md gap-2"
+                            >
+                              <div className="space-y-0.5 min-w-0">
+                                <p className="text-xs font-semibold text-foreground/70 truncate">{w.title}</p>
+                                <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Calendar className="h-2.5 w-2.5" />
+                                  {formatDate(w.assignedAt)}
+                                </p>
+                              </div>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                                onClick={() => handleDelete(w.id)}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </CardContent>
                 )}
@@ -653,7 +832,7 @@ export default function AdminRutinasPage() {
           })}
         </div>
       )}
-      {/* Translucent Confirmation Modal */}
+
       {mounted && workoutToDelete && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1E110A]/40 backdrop-blur-md animate-in fade-in duration-200 p-4">
           <div className="bg-white/80 border border-orange-100/40 shadow-2xl rounded-2xl max-w-sm w-full p-6 backdrop-blur-xl animate-in zoom-in-95 duration-200 space-y-4">
