@@ -259,6 +259,18 @@ IMPORTANTE - VARIEDAD Y EVITAR REPETICIONES DE EJERCICIOS:
 - Evita la monotonía en la rutina de ejercicios distribuyendo variantes y movimientos alternativos a lo largo de la semana.
 - Si un grupo muscular se entrena más de una vez por semana, no prescribas exactamente los mismos ejercicios en ambos días. Utiliza ejercicios alternativos para el mismo grupo muscular en la segunda sesión.
 
+IMPORTANTE - ADAPTACIÓN AL TIEMPO Y VOLUMEN DE ENTRENAMIENTO:
+- Adapta dinámicamente el volumen de ejercicios (número de ejercicios por sesión y por grupo muscular) según los días disponibles y el tiempo por sesión del cliente:
+  * Si el cliente dispone de POCOS días de entrenamiento (ej: 1-3 días) o POCO tiempo por sesión (ej: 30-45 minutos), genera rutinas con menor cantidad de ejercicios (ej: 3-4 ejercicios por sesión, más básicos y multiarticulares) para que sea realizable en ese tiempo.
+  * Si el cliente dispone de MUCHOS días de entrenamiento (ej: 5 o más días a la semana) y SESIONES LARGAS (ej: 1.5 a 2 horas, o 90-120 minutos), la rutina debe tener alto volumen para que complete ese tiempo: prescribe entre 3 y 4 ejercicios por grupo muscular entrenado en esa sesión.
+- Estructura de ejemplo para clientes con 5 días de entrenamiento y sesiones largas:
+  * Lunes: Pecho, Hombro y Tríceps (varios ejercicios de cada grupo muscular).
+  * Martes: Espalda y Bíceps.
+  * Miércoles: Pierna completa.
+  * Jueves: Brazo completo (Bíceps, Tríceps, Hombro).
+  * Viernes: Espalda y Pecho (con enfoque cruzado).
+- Variación de enfoque muscular: Si un grupo muscular se entrena en 2 días diferentes de la semana, varía el enfoque. Por ejemplo, si hay dos días de espalda, haz que el primer día de espalda se enfoque en amplitud (ej: jalones, dominadas), y el segundo día se enfoque en densidad y grosor (ej: remos, peso muerto, etc.).
+
 Debes responder ÚNICAMENTE con un objeto JSON válido. El JSON debe cumplir exactamente con esta estructura:
 {
   "title": "Título descriptivo y profesional de la rutina (ej: Rutina de Hipertrofia de 3 Días, Programa de Fuerza para Principiantes)",
@@ -281,7 +293,7 @@ Adapta estrictamente la selección de ejercicios y el equipamiento según el lug
 - Si el lugar es "En el gimnasio": Puedes prescribir cualquier ejercicio con máquinas, poleas, barras libres y mancuernas.
 - Si el lugar es "En casa": PROHIBIDO prescribir ejercicios con poleas, máquinas guiadas complejas o barras con soportes. Solo peso corporal, bandas o mancuernas ligeras.
 - Si el lugar es "Al aire libre": Solo calistenia, peso corporal, dominadas en parque, fondos, correr o bandas elásticas.
-Adapta el volumen según nivel: Principiante: 3-4 ejercicios/sesión. Intermedio: 4-5. Avanzado: 5-6.
+Adapta el volumen según nivel y tiempo disponible por sesión: Principiante: 3-4 ejercicios/sesión. Intermedio: 4-5. Avanzado: 5-6. Si las sesiones son de 1.5 a 2 horas (90-120 minutos), incrementa el número total de ejercicios por sesión (puedes poner 6-8 ejercicios en total) para justificar y llenar de forma realista esa duración.
 Asegúrate de que el JSON sea válido sin comentarios ni markdown.`
 
     const parsedObs = parseObservations(questionnaire?.observations)

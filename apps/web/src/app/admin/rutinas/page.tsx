@@ -53,7 +53,8 @@ export default function AdminRutinasPage() {
   const [clients, setClients] = useState<ClientOption[]>([])
   const [isLoading, setIsLoading] = useState(!workoutsLoaded || !clientsLoaded)
   const [showForm, setShowForm] = useState(false)
-  const [exercises, setExercises] = useState<ExerciseForm[]>([{ name: '', sets: '', reps: '', rest: '', notes: '', day: '' }])
+  const [exercises, setExercises] = useState<ExerciseForm[]>([{ name: '', sets: '', reps: '', rest: '', notes: '', day: 'Lunes' }])
+  const [activeExerciseTab, setActiveExerciseTab] = useState<string>('Lunes')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [search, setSearch] = useState('')
   const [expandedClientId, setExpandedClientId] = useState<string | null>(null)
@@ -106,7 +107,7 @@ export default function AdminRutinasPage() {
     }
   }, [workoutToDelete])
 
-  const addExercise = () => setExercises((prev) => [...prev, { name: '', sets: '', reps: '', rest: '', notes: '', day: '' }])
+  const addExercise = () => setExercises((prev) => [...prev, { name: '', sets: '', reps: '', rest: '', notes: '', day: activeExerciseTab === 'Otros' ? '' : activeExerciseTab }])
   const removeExercise = (i: number) => setExercises((prev) => prev.filter((_, idx) => idx !== i))
   const updateExercise = (i: number, field: keyof ExerciseForm, value: string) => {
     setExercises((prev) => prev.map((ex, idx) => idx === i ? { ...ex, [field]: value } : ex))
@@ -192,7 +193,8 @@ export default function AdminRutinasPage() {
   const handleNewWorkoutForClient = (clientId: string) => {
     setEditingWorkoutId(null)
     reset({ userId: clientId, exercises: [] } as Partial<WorkoutInput>)
-    setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: '' }])
+    setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: 'Lunes' }])
+    setActiveExerciseTab('Lunes')
     setValue('userId', clientId)
     setShowForm(true)
   }
@@ -218,11 +220,15 @@ export default function AdminRutinasPage() {
           notes: ex.notes || '',
           day: ex.day || '',
         })))
+        const firstActiveDay = full.exercises.find(ex => ex.day)?.day || 'Lunes'
+        setActiveExerciseTab(firstActiveDay)
       } else {
-        setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: '' }])
+        setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: 'Lunes' }])
+        setActiveExerciseTab('Lunes')
       }
     } catch {
-      setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: '' }])
+      setExercises([{ name: '', sets: '', reps: '', rest: '', notes: '', day: 'Lunes' }])
+      setActiveExerciseTab('Lunes')
     }
     
     setExpandedClientId(w.userId)
@@ -288,56 +294,172 @@ export default function AdminRutinasPage() {
               {/* Exercises */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <Label>Ejercicios</Label>
-                  <Button type="button" size="sm" variant="outline" onClick={addExercise}>
-                    <PlusCircle className="h-4 w-4 mr-1" /> Añadir ejercicio
+                  <Label className="text-sm font-bold">Ejercicios</Label>
+                  <Button type="button" size="sm" variant="outline" onClick={addExercise} className="bg-primary/5 hover:bg-primary/10 text-primary border-primary/20">
+                    <PlusCircle className="h-4 w-4 mr-1 text-primary" /> Añadir ejercicio
                   </Button>
                 </div>
+
+                {/* Day Selector Tabs */}
+                <div className="flex flex-wrap gap-1 mb-4 p-1 bg-muted/40 rounded-lg border">
+                  {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Otros'].map((day) => {
+                    const count = exercises.filter((ex) => {
+                      if (day === 'Otros') {
+                        return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
+                      }
+                      return ex.day === day
+                    }).length
+
+                    return (
+                      <Button
+                        key={day}
+                        type="button"
+                        variant={activeExerciseTab === day ? 'default' : 'ghost'}
+                        size="sm"
+                        onClick={() => setActiveExerciseTab(day)}
+                        className={cn(
+                          "text-xs font-semibold px-3 py-1.5 rounded-md transition-all shrink-0 h-8",
+                          activeExerciseTab === day
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {day}
+                        {count > 0 && (
+                          <span className={cn(
+                            "ml-1.5 px-1.5 py-0.5 text-[9px] rounded-full font-bold",
+                            activeExerciseTab === day ? "bg-white/25 text-white" : "bg-primary/10 text-primary"
+                          )}>
+                            {count}
+                          </span>
+                        )}
+                      </Button>
+                    )
+                  })}
+                </div>
+
                 <div className="space-y-3">
-                  {exercises.map((ex, i) => (
-                    <div key={i} className="grid grid-cols-12 gap-2 items-end border rounded-md p-3">
-                      <div className="col-span-12 sm:col-span-3 space-y-1">
-                        <Label className="text-xs">Ejercicio</Label>
-                        <Input value={ex.name} onChange={(e) => updateExercise(i, 'name', e.target.value)} placeholder="Sentadilla" />
-                      </div>
-                      <div className="col-span-12 sm:col-span-2 space-y-1">
-                        <Label className="text-xs">Día</Label>
-                        <select
-                          value={ex.day || ''}
-                          onChange={(e) => updateExercise(i, 'day', e.target.value)}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                        >
-                          <option value="">Sin día</option>
-                          <option value="Lunes">Lunes</option>
-                          <option value="Martes">Martes</option>
-                          <option value="Miércoles">Miércoles</option>
-                          <option value="Jueves">Jueves</option>
-                          <option value="Viernes">Viernes</option>
-                          <option value="Sábado">Sábado</option>
-                          <option value="Domingo">Domingo</option>
-                        </select>
-                      </div>
-                      <div className="col-span-3 sm:col-span-2 space-y-1">
-                        <Label className="text-xs">Series</Label>
-                        <Input value={ex.sets} onChange={(e) => updateExercise(i, 'sets', e.target.value)} placeholder="3" />
-                      </div>
-                      <div className="col-span-3 sm:col-span-2 space-y-1">
-                        <Label className="text-xs">Reps</Label>
-                        <Input value={ex.reps} onChange={(e) => updateExercise(i, 'reps', e.target.value)} placeholder="8-12" />
-                      </div>
-                      <div className="col-span-3 sm:col-span-2 space-y-1">
-                        <Label className="text-xs">Descanso</Label>
-                        <Input value={ex.rest} onChange={(e) => updateExercise(i, 'rest', e.target.value)} placeholder="60s" />
-                      </div>
-                      <div className="col-span-3 sm:col-span-1 flex items-end justify-center">
-                        {exercises.length > 1 && (
-                          <Button type="button" size="icon" variant="ghost" className="text-destructive" onClick={() => removeExercise(i)}>
+                  {(() => {
+                    const filtered = exercises.map((ex, index) => ({ ex, index })).filter(({ ex }) => {
+                      if (activeExerciseTab === 'Otros') {
+                        return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
+                      }
+                      return ex.day === activeExerciseTab
+                    })
+
+                    if (filtered.length === 0) {
+                      return (
+                        <div className="text-center py-8 border border-dashed rounded-lg bg-muted/5 flex flex-col items-center justify-center space-y-2">
+                          <p className="text-xs text-muted-foreground">No hay ejercicios asignados al {activeExerciseTab === 'Otros' ? 'resto de días' : activeExerciseTab} en esta rutina.</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="link"
+                            onClick={() => {
+                              setExercises((prev) => [
+                                ...prev,
+                                { name: '', sets: '', reps: '', rest: '', notes: '', day: activeExerciseTab === 'Otros' ? '' : activeExerciseTab }
+                              ])
+                            }}
+                            className="text-xs font-semibold text-primary"
+                          >
+                            + Añadir primer ejercicio para el {activeExerciseTab === 'Otros' ? 'día' : activeExerciseTab}
+                          </Button>
+                        </div>
+                      )
+                    }
+
+                    return filtered.map(({ ex, index }) => (
+                      <div key={index} className="grid grid-cols-12 gap-3 items-start border border-muted-foreground/15 rounded-lg p-3 bg-muted/5 hover:border-primary/20 transition-all shadow-sm">
+                        {/* Name */}
+                        <div className="col-span-12 sm:col-span-4 space-y-1">
+                          <Label className="text-xs font-semibold text-foreground/80">Ejercicio</Label>
+                          <Input
+                            value={ex.name}
+                            onChange={(e) => updateExercise(index, 'name', e.target.value)}
+                            placeholder="Sentadilla con barra"
+                            className="h-9"
+                          />
+                        </div>
+
+                        {/* Sets */}
+                        <div className="col-span-4 sm:col-span-2 space-y-1">
+                          <Label className="text-xs font-semibold text-foreground/80">Series</Label>
+                          <Input
+                            value={ex.sets}
+                            onChange={(e) => updateExercise(index, 'sets', e.target.value)}
+                            placeholder="4"
+                            className="h-9"
+                          />
+                        </div>
+
+                        {/* Reps */}
+                        <div className="col-span-4 sm:col-span-2 space-y-1">
+                          <Label className="text-xs font-semibold text-foreground/80">Reps</Label>
+                          <Input
+                            value={ex.reps}
+                            onChange={(e) => updateExercise(index, 'reps', e.target.value)}
+                            placeholder="8-12"
+                            className="h-9"
+                          />
+                        </div>
+
+                        {/* Rest */}
+                        <div className="col-span-4 sm:col-span-2 space-y-1">
+                          <Label className="text-xs font-semibold text-foreground/80">Descanso</Label>
+                          <Input
+                            value={ex.rest}
+                            onChange={(e) => updateExercise(index, 'rest', e.target.value)}
+                            placeholder="90s"
+                            className="h-9"
+                          />
+                        </div>
+
+                        {/* Day selection inside item in case they want to move it */}
+                        <div className="col-span-12 sm:col-span-2 space-y-1">
+                          <Label className="text-xs font-semibold text-foreground/80">Día</Label>
+                          <select
+                            value={ex.day || ''}
+                            onChange={(e) => updateExercise(index, 'day', e.target.value)}
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                          >
+                            <option value="">Sin día</option>
+                            <option value="Lunes">Lunes</option>
+                            <option value="Martes">Martes</option>
+                            <option value="Miércoles">Miércoles</option>
+                            <option value="Jueves">Jueves</option>
+                            <option value="Viernes">Viernes</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                          </select>
+                        </div>
+
+                        {/* Notes input */}
+                        <div className="col-span-11 mt-1 space-y-1">
+                          <Label className="text-[11px] font-semibold text-muted-foreground">Notas / Instrucciones adicionales</Label>
+                          <Input
+                            value={ex.notes || ''}
+                            onChange={(e) => updateExercise(index, 'notes', e.target.value)}
+                            placeholder="Ej: Foco excéntrico controlado de 3s, RIR 1"
+                            className="h-8 text-xs bg-background"
+                          />
+                        </div>
+
+                        {/* Delete button */}
+                        <div className="col-span-1 mt-1 flex items-end justify-center">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 shrink-0"
+                            onClick={() => removeExercise(index)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  })()}
                 </div>
               </div>
 
