@@ -669,7 +669,7 @@ export default function AdminRutinasPage() {
                         {fullDraftWorkout && fullDraftWorkout.exercises && fullDraftWorkout.exercises.length > 0 && (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
                             {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Otros'].map(day => {
-                              const dayExs = fullDraftWorkout.exercises.filter(ex => {
+                              const dayExs = fullDraftWorkout.exercises.filter((ex: any) => {
                                 if (day === 'Otros') {
                                   return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
                                 }
@@ -744,7 +744,7 @@ export default function AdminRutinasPage() {
                         {fullActiveWorkout && fullActiveWorkout.exercises && fullActiveWorkout.exercises.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
                             {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo', 'Otros'].map(day => {
-                              const dayExs = fullActiveWorkout.exercises.filter(ex => {
+                              const dayExs = fullActiveWorkout.exercises.filter((ex: any) => {
                                 if (day === 'Otros') {
                                   return !ex.day || !['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].includes(ex.day)
                                 }
