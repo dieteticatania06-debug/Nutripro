@@ -108,19 +108,16 @@ html {
   outline: none;
 }
 
-/* Custom scrollbar */
+/* Hide scrollbars globally while preserving scroll capability */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  display: none;
+  width: 0 !important;
+  height: 0 !important;
 }
-::-webkit-scrollbar-track {
-  @apply bg-muted;
-}
-::-webkit-scrollbar-thumb {
-  @apply bg-border rounded-full;
-}
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted-foreground;
+
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 /* Chrome/Safari Autofill glassmorphism override */
