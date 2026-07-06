@@ -680,7 +680,7 @@ export default function AdminRutinasPage() {
                                 <div key={day} className="p-3 rounded-xl border bg-white/50 backdrop-blur-md space-y-2">
                                   <h4 className="text-xs font-bold text-amber-700 uppercase tracking-wider">{day}</h4>
                                   <div className="space-y-1.5">
-                                    {dayExs.map((ex, idx) => (
+                                    {dayExs.map((ex: any, idx) => (
                                       <div key={idx} className="text-xs border-b border-muted/50 pb-1.5 last:border-0 last:pb-0">
                                         <p className="font-semibold text-foreground">{ex.name}</p>
                                         <p className="text-[10px] text-muted-foreground">
@@ -755,7 +755,7 @@ export default function AdminRutinasPage() {
                                 <div key={day} className="p-3 rounded-xl border bg-white/50 backdrop-blur-md space-y-2">
                                   <h4 className="text-xs font-bold text-[#4A7C59] uppercase tracking-wider">{day}</h4>
                                   <div className="space-y-1.5">
-                                    {dayExs.map((ex, idx) => (
+                                    {dayExs.map((ex: any, idx) => (
                                       <div key={idx} className="text-xs border-b border-muted/50 pb-1.5 last:border-0 last:pb-0">
                                         <p className="font-semibold text-foreground">{ex.name}</p>
                                         <p className="text-[10px] text-muted-foreground">
